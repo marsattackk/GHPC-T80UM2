@@ -294,8 +294,7 @@ namespace T80UM2.Common
 					{
 						Vector3 a = toPrefab.MultiplyPoint3x4(v[t[i]]), b = toPrefab.MultiplyPoint3x4(v[t[i + 1]]), c = toPrefab.MultiplyPoint3x4(v[t[i + 2]]);
 						bool h = holderBox.Contains((a + b + c) / 3f);
-						var into = h ? hide[s] : keep[s];
-						into.Add(t[i]); into.Add(t[i + 1]); into.Add(t[i + 2]);
+						(h ? hide[s] : keep[s]).AddRange(new[] { t[i], t[i + 1], t[i + 2] });
 						if (!h) continue;
 						here++;
 						float area = Vector3.Cross(b - a, c - a).magnitude;

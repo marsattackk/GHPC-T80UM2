@@ -53,7 +53,6 @@ namespace T80UM2.Common
 	{
 		public sealed class Data
 		{
-			public float Pitch;
 			public Vector3[] V;
 			public Vector2[] Uv;
 			public int[] Round, Cartridge;
@@ -65,7 +64,8 @@ namespace T80UM2.Common
 			using (var r = new BinaryReader(new GZipStream(new MemoryStream(gz), CompressionMode.Decompress)))
 			{
 				if (new string(r.ReadChars(4)) != "GBLT" || r.ReadInt32() != 1) return null;
-				var d = new Data { Pitch = r.ReadSingle() };
+				var d = new Data();
+				r.ReadSingle();
 				int n = r.ReadInt32();
 				d.V = new Vector3[n]; d.Uv = new Vector2[n];
 				for (int i = 0; i < n; i++) { d.V[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()); d.Uv[i] = new Vector2(r.ReadSingle(), r.ReadSingle()); }

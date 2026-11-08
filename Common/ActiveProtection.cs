@@ -62,6 +62,7 @@ namespace T80UM2.Common
 public int Id;
 			public ApsMath.Track T = new ApsMath.Track();
 			public Vector3 Prev; public int PrevFrame = -10;
+			public V3 Vel; public bool HasVel;
 			public Vector3 Mean; public bool HasMean;
 			public bool WindowLogged;
 			public Vector3 Mouth; public bool Launched; public int Tube;
@@ -322,7 +323,11 @@ public int Id;
 					_tracks[r] = w;
 				}
 				int f = Time.frameCount;
-				Vector3 vel = w.PrevFrame == f - 1 && dt > 1e-5f ? (pos - w.Prev) / dt : r.transform.forward * (r.CurrentSpeed > 1f ? r.CurrentSpeed : (r.Info != null ? r.Info.MuzzleVelocity : 0f));
+				var fb = r.transform.forward * (r.CurrentSpeed > 1f ? r.CurrentSpeed : (r.Info != null ? r.Info.MuzzleVelocity : 0f));
+				var mv = pos - w.Prev;
+				var v3 = ApsMath.FrameVelocity(w.PrevFrame == f - 1, new V3(mv.x, mv.y, mv.z), dt, w.HasVel, w.Vel, new V3(fb.x, fb.y, fb.z));
+				Vector3 vel = new Vector3(v3.x, v3.y, v3.z);
+				w.Vel = v3; w.HasVel = true;
 				w.Prev = pos; w.PrevFrame = f; w.LastFrame = f;
 				if (w.T.Done) return;
 				var pT = Turret.InverseTransformPoint(pos);
