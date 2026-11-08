@@ -21,7 +21,7 @@ together.
 
 <p align="center">
   <img src="docs/images/t80um2_hero.jpg" width="49%" alt="The T-80UM2 in GHPC">
-  <img src="docs/images/t80um2_drozd.jpg" width="49%" alt="Drozd shooting down a missile in front of the T-80UM2">
+  <img src="docs/images/t80um2_drozd.jpg" width="49%" alt="Drozd taking out an RPG grenade in front of the T-80UM2">
 </p>
 
 This README describes **version 0.1.0**. No other mod needed, just MelonLoader.
