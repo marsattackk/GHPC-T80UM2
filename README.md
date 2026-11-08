@@ -24,6 +24,8 @@ together.
   <img src="docs/images/t80um2_drozd.jpg" width="49%" alt="Drozd taking out an RPG grenade in front of the T-80UM2">
 </p>
 
+*Left: the T-80UM2 with its Drozd blocks still on. Right: Drozd setting off an RPG grenade before it gets to the tank.*
+
 This README describes **version 0.1.0**. No other mod needed, just MelonLoader.
 
 ## Installing it
@@ -223,6 +225,8 @@ rounds a side, 8 in all, covering 40° either side of where the turret points in
 
 ![The NSVT on its pedestal on the commander's hatch](docs/images/t80um2_nsvt.jpg)
 
+*The NSVT on its pedestal next to the commander's hatch, the K10-T sight on top and a 100-round box on the side.*
+
 A 12.7 mm NSVT "Utyos" on its own pedestal, 450 rounds (four boxes of 100 and one of 50), not stabilised, laid by hand
 all round, -5° / +30°. Switch to the commander and select it like any other weapon, aim through its K10-T collimator
 sight, or straight from the commander's head view.
@@ -263,11 +267,6 @@ in the game's normal ammo menu, 3BM42 is the default because it's what a serial 
 </details>
 
 ## The paint
-
-<p align="center">
-  <img src="docs/images/paint_weathered.jpg" width="49%" alt="Weathered paint (default)">
-  <img src="docs/images/paint_clean.jpg" width="49%" alt="Clean factory paint">
-</p>
 
 Plain olive like the Kubinka photos, with the olive canvas mantlet cover. The weathering is made for the T-80UM2's own
 shape: dust and mud heavier toward the ground, grime in the crevices, streaks, rust and chipped edges. Set
