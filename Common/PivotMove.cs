@@ -1,0 +1,83 @@
+using System.Linq;
+using GHPC;
+using MelonLoader;
+using UnityEngine;
+
+namespace T80UM2.Common
+{
+	internal static class PivotMove
+	{
+		internal sealed class Settings
+		{
+			public Vector3 BaseTurret, NewTurret, BaseGun, NewGun;
+			public Vector3? NewMuzzle;
+			public string Tag = "turret axis";
+		}
+
+		internal static void Apply(GHPC.Vehicle.Vehicle vehicle, Settings s)
+		{
+			var root = vehicle.transform;
+			var turret = RigBones.Turret(root);
+			var gun = turret != null ? RigBones.Gun(root) : null;
+			if (turret == null || gun == null) { MelonLogger.Warning($"{s.Tag}: TURRET/GUN bones not found; base pivots kept."); return; }
+
+			var plats = root.GetComponentsInChildren<AimablePlatform>(true);
+			var orig = Reflect.Field(typeof(AimablePlatform), "_originalLocalRotation");
+			var gunPlat = plats.FirstOrDefault(p => p.Transform == gun);
+			var turretPlat = plats.FirstOrDefault(p => p.Transform == turret);
+			var gunRest = gunPlat != null ? (Quaternion)orig.GetValue(gunPlat) : gun.localRotation;
+			var turretRest = turretPlat != null ? (Quaternion)orig.GetValue(turretPlat) : turret.localRotation;
+			// Rest pose first, the AI may already have turned the turret.
+			turret.localRotation = turretRest;
+			gun.localRotation = gunRest;
+
+			var muzzle = vehicle.GetComponent<GHPC.Weapons.WeaponsManager>()?.Weapons?.FirstOrDefault()?.Weapon?.MuzzleIdentity;
+
+			// Followers and skins are redone from the old bone poses, the collider groups may still be lagging.
+			var turretOld = (turret.position, turret.rotation); var gunOld = (gun.position, gun.rotation);
+			Followers.ShiftBone(turret, turret.parent.InverseTransformVector(root.TransformVector(s.NewTurret - s.BaseTurret)));
+			Followers.ShiftBone(gun, turret.InverseTransformVector(root.TransformVector(s.NewGun - s.BaseGun)));
+			Followers.Refollow(root, turret, turretOld);
+			Followers.Refollow(root, gun, gunOld);
+			Rebind(root, (turret, turretOld), (gun, gunOld));
+			if (s.NewMuzzle.HasValue)
+			{
+				if (muzzle == null) MelonLogger.Warning($"{s.Tag}: no muzzle point to move.");
+				else
+				{
+					var stay = muzzle.Cast<Transform>().Where(c => c.GetComponentInChildren<GHPC.Camera.CameraSlot>(true) != null || c.GetComponentInChildren<GHPC.Equipment.Optics.UsableOptic>(true) != null)
+						.Select(c => (c, c.position, c.rotation)).ToList();
+					muzzle.position = root.TransformPoint(s.NewMuzzle.Value);
+					foreach (var (c, p, r) in stay) c.SetPositionAndRotation(p, r);
+				}
+			}
+		}
+
+		// Never write the mesh, every T-72M1 shares it (#4). A child at the old pose stands in for the moved bone.
+		static void Rebind(Transform root, params (Transform bone, (Vector3 pos, Quaternion rot) old)[] moved)
+		{
+			var gun = moved[moved.Length - 1].bone;
+			foreach (var s in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+			{
+				if (s.bones == null || !s.bones.Contains(gun) || s.sharedMesh == null) continue;
+				var bones = s.bones;
+				foreach (var (bone, old) in moved)
+				{
+					Transform bind = null;
+					for (int i = 0; i < bones.Length; i++)
+					{
+						if (bones[i] != bone) continue;
+						if (bind == null)
+						{
+							bind = new GameObject(bone.name + " (bind)").transform;
+							bind.SetParent(bone, false);
+							bind.SetPositionAndRotation(old.pos, old.rot);
+						}
+						bones[i] = bind;
+					}
+				}
+				s.bones = bones;
+			}
+		}
+	}
+}

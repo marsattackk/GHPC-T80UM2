@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>T80UM2</AssemblyName>
+    <RootNamespace>T80UM2</RootNamespace>
+    <Nullable>disable</Nullable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Gunner HEAT PC\Bin</GameDir>
+    <NoWarn>$(NoWarn);MSB3277;CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\T80B_wheels_trimmed.bin" LogicalName="T80B_wheels_trimmed.bin" />
+    <EmbeddedResource Include="Resources\kord_belt_round.bin" LogicalName="kord_belt_round.bin" />
+    <EmbeddedResource Include="Resources\kord_belt_round_albedo.png" LogicalName="kord_belt_round_albedo.png" />
+    <EmbeddedResource Include="Resources\kord_belt_round_normal.png" LogicalName="kord_belt_round_normal.png" />
+    <EmbeddedResource Include="Resources\kord_belt_round_metal.png" LogicalName="kord_belt_round_metal.png" />
+    <EmbeddedResource Include="Resources\round_3bm42_co.png" LogicalName="round_3bm42_co.png" />
+    <EmbeddedResource Include="Resources\round_3bm59_co.png" LogicalName="round_3bm59_co.png" />
+    <EmbeddedResource Include="Resources\round_3bm60_co.png" LogicalName="round_3bm60_co.png" />
+    <EmbeddedResource Include="Resources\round_9m119m_co.png" LogicalName="round_9m119m_co.png" />
+    <EmbeddedResource Include="Resources\round_meshes.txt" LogicalName="round_meshes.txt" />
+    <EmbeddedResource Include="Resources\round_mesh_3bm60_charge.mesh" LogicalName="round_mesh_3bm60_charge.mesh" />
+    <EmbeddedResource Include="Resources\round_mesh_3bm60_oring.mesh" LogicalName="round_mesh_3bm60_oring.mesh" />
+    <EmbeddedResource Include="Resources\round_mesh_3bm60_rod.mesh" LogicalName="round_mesh_3bm60_rod.mesh" />
+    <EmbeddedResource Include="Resources\round_mesh_3bm60_sabot_001.mesh" LogicalName="round_mesh_3bm60_sabot_001.mesh" />
+    <EmbeddedResource Include="Resources\round_mesh_3bm60_sabot_003.mesh" LogicalName="round_mesh_3bm60_sabot_003.mesh" />
+    <EmbeddedResource Include="Resources\round_mesh_3bm60_sabot_004.mesh" LogicalName="round_mesh_3bm60_sabot_004.mesh" />
+    <EmbeddedResource Include="Resources\round_mesh_9m119m_missile.mesh" LogicalName="round_mesh_9m119m_missile.mesh" />
+    <EmbeddedResource Include="Resources\round_mesh_9x949_charge.mesh" LogicalName="round_mesh_9x949_charge.mesh" />
+    <EmbeddedResource Include="Resources\1g46_day.jsonc" LogicalName="1g46_day.jsonc" />
+    <EmbeddedResource Include="Resources\tpn4_night.jsonc" LogicalName="tpn4_night.jsonc" />
+    <EmbeddedResource Include="Resources\k10t_aa.jsonc" LogicalName="k10t_aa.jsonc" />
+    <EmbeddedResource Include="Resources\tkn4s_day.jsonc" LogicalName="tkn4s_day.jsonc" />
+    <EmbeddedResource Include="Resources\tkn4s_night.jsonc" LogicalName="tkn4s_night.jsonc" />
+    <EmbeddedResource Include="Resources\agava2_monitor.jsonc" LogicalName="agava2_monitor.jsonc" />
+    <EmbeddedResource Include="Resources\essa_monitor.jsonc" LogicalName="essa_monitor.jsonc" />
+    <EmbeddedResource Include="Resources\modules_built.json" LogicalName="modules_built.json" />
+    <EmbeddedResource Include="Resources\interior_map.txt" LogicalName="interior_map.txt" />
+    <EmbeddedResource Include="Resources\gun_depression.txt" LogicalName="gun_depression.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader" HintPath="$(GameDir)\MelonLoader\net35\MelonLoader.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(GameDir)\MelonLoader\net35\0Harmony.dll" Private="false" />
+    <Reference Include="$(GameDir)\GHPC_Data\Managed\*.dll" Exclude="$(GameDir)\GHPC_Data\Managed\mscorlib.dll;$(GameDir)\GHPC_Data\Managed\netstandard.dll;$(GameDir)\GHPC_Data\Managed\System*.dll;$(GameDir)\GHPC_Data\Managed\Mono*.dll">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Build stamp (BuildStamp.targets, beside this file): AssemblyInformationalVersion "<version>+<commit>.public", logged on
+       load. The commit is the one this source was cleaned from when the release build passes it (-p:GitCommit=...), else "unknown". -->
+  <PropertyGroup>
+    <BuildFlavour Condition="'$(BuildFlavour)' == ''">public</BuildFlavour>
+    <StampAskGit>false</StampAskGit>
+  </PropertyGroup>
+  <Import Project="BuildStamp.targets" Condition="Exists('BuildStamp.targets')" />
+  <!-- A mod with a native half: its build and embedding (Native.targets, beside this file, when the mod has one). -->
+  <Import Project="Native.targets" Condition="Exists('Native.targets')" />
+
+</Project>

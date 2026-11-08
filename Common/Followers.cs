@@ -1,0 +1,80 @@
+using System.Collections.Generic;
+using System.Linq;
+using GHPC.Utility;
+using GHPC.Vehicle;
+using HarmonyLib;
+using UnityEngine;
+
+namespace T80UM2.Common
+{
+	// Collider groups only re-sync while something moves, after spawn the turret group can sit 16 cm low for a second.
+	// Place off the stored offset, never the current pose.
+	internal static class Followers
+	{
+		internal static readonly AccessTools.FieldRef<LateFollow, Vector3> PosShift = Reflect.FieldRefAccess<LateFollow, Vector3>("_localPosShift");
+		internal static readonly AccessTools.FieldRef<LateFollow, Quaternion> RotShift = Reflect.FieldRefAccess<LateFollow, Quaternion>("_localRotShift");
+
+		internal static void PlaceOnBone(Transform piece, Transform bone, Transform target)
+		{
+			var follow = target.GetComponentsInParent<LateFollow>(true).FirstOrDefault(f => f.FollowTarget == bone);
+			if (follow == null)
+			{
+				piece.SetParent(bone, false);
+				piece.localPosition = Vector3.zero; piece.localRotation = Quaternion.identity; piece.localScale = Vector3.one;
+				piece.SetParent(target, true);
+				return;
+			}
+			var boneToFollower = Matrix4x4.TRS(PosShift(follow), RotShift(follow), Vector3.one);
+			var followerToTarget = follow.transform.worldToLocalMatrix * target.localToWorldMatrix;
+			var boneInTarget = (boneToFollower * followerToTarget).inverse;
+			piece.SetParent(target, false);
+			piece.localPosition = boneInTarget.MultiplyPoint3x4(Vector3.zero);
+			piece.localRotation = boneInTarget.rotation;
+			piece.localScale = Vector3.one;
+		}
+
+		// Groups live at the scene root, LateFollowers is the only way back to them.
+		internal static HashSet<LateFollow> On(Transform root, Transform bone)
+		{
+			var set = new HashSet<LateFollow>(root.GetComponentsInChildren<LateFollow>(true).Where(f => f.FollowTarget == bone));
+			var target = bone.GetComponent<LateFollowTarget>();
+			if (target != null) foreach (var f in target.LateFollowers) if (f != null) set.Add(f);
+			return set;
+		}
+
+		internal static void Refollow(Transform root, Transform bone, (Vector3 pos, Quaternion rot) old)
+		{
+			var set = On(root, bone);
+			var oldM = Matrix4x4.TRS(old.pos, old.rot, bone.lossyScale);
+			foreach (var f in set)
+			{
+				var world = oldM.MultiplyPoint3x4(PosShift(f));
+				var r = RotShift(f);
+				PosShift(f) = bone.InverseTransformPoint(world);
+				RotShift(f) = Quaternion.Inverse(bone.rotation) * old.rot * r;
+			}
+		}
+
+		internal static void ShiftBone(Transform bone, Vector3 delta)
+		{
+			var kids = bone.Cast<Transform>().Select(c => (c, c.position, c.rotation)).ToList();
+			bone.localPosition += delta;
+			foreach (var (c, p, r) in kids) c.SetPositionAndRotation(p, r);
+		}
+
+		internal static void ColliderGroup(Transform root, string name, Transform follow, params string[] children)
+		{
+			var g = new GameObject(name) { layer = 8 };
+			g.SetActive(false);
+			g.transform.SetParent(root, false);
+			g.transform.SetPositionAndRotation(follow.position, follow.rotation);
+			var f = g.AddComponent<LateFollow>();
+			f.FollowTarget = follow;
+			f.ForceToRoot = true;
+			foreach (var c in children) { var t = new GameObject(c) { layer = 8 }.transform; t.SetParent(g.transform, false); }
+			g.SetActive(true);
+		}
+
+		internal static Transform TurretBone(Vehicle v) => RigBones.Turret(v.transform);
+	}
+}

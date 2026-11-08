@@ -1,0 +1,36 @@
+using GHPC.Vehicle;
+using UnityEngine;
+
+namespace T80UM2.Common
+{
+	internal static class PortAxes
+	{
+		internal sealed class Settings
+		{
+			public Vector3 BaseTurret, NewTurret, BaseGun, NewGun;
+			public Vector3 Muzzle;
+			public float PitchDeg;
+			public bool TiltRing = true;
+			public string Tag = "port";
+			public Vector3 LevelledMuzzle => NewGun + Quaternion.AngleAxis(-PitchDeg, Vector3.right) * (Muzzle - NewGun);
+		}
+
+		internal static Settings FromRig(RigMap rig, Vector3 baseTurret, Vector3 baseGun, string tag) =>
+			rig == null || !rig.HasAxes ? null : new Settings
+			{
+				BaseTurret = baseTurret, NewTurret = rig.Turret, BaseGun = baseGun, NewGun = rig.Gun,
+				Muzzle = rig.Muzzle, PitchDeg = rig.PitchDeg, Tag = tag,
+			};
+
+		internal static void Apply(Vehicle vehicle, Settings s)
+		{
+			PivotMove.Apply(vehicle, new PivotMove.Settings
+			{
+				BaseTurret = s.BaseTurret, NewTurret = s.NewTurret, BaseGun = s.BaseGun, NewGun = s.NewGun, Tag = s.Tag + " turret axis", NewMuzzle = s.LevelledMuzzle,
+			});
+			// After the pivots, the seat goes on the moved one.
+			if (s.TiltRing && Mathf.Abs(s.PitchDeg) > 1e-4f)
+				TiltedRing.Apply(vehicle, Quaternion.AngleAxis(s.PitchDeg, Vector3.right), s.Tag + " tilted ring");
+		}
+	}
+}
