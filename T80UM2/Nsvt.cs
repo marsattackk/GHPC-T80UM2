@@ -311,7 +311,7 @@ namespace T80UM2
 				var gunner = wm.Weapons.Where(w => w.Role == WeaponSystemRole.MainGun || w.Role == WeaponSystemRole.Coaxial).Select(w => w.Weapon).Where(w => w != null).ToArray();
 				var fit = vehicle.GetComponentInChildren<Sights.Fitted>(true);
 				// Same trick as the vanilla M60A3 / T-64B: picking the NSVT switches to the К10-Т and back.
-				var slots = new[] { fit?.Day?.slot, fit?.Night?.slot }.Where(x => x != null).ToArray();
+				var slots = new[] { fit?.Day?.slot, fit?.Night?.slot, fit?.Agava?.slot }.Where(x => x != null).Distinct().ToArray();
 				foreach (var s in slots) s.ExclusiveWeapons = gunner;
 				st.Fcs.SetStabsActive(false);
 				RemoteMg.LateSetup(vehicle);
