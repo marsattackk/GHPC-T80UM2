@@ -19,9 +19,9 @@ namespace T80UM2
 		static readonly string[] GlacisStack = { "superstructure_front_dm", "turret_01_front_dm", "turret_02_front_dm", "turret_03_front_dm", "turret_04_front_dm" };
 		// Source-only scales just the two fillings back, each by the ratio of its two solves on the same lines.
 		const float CheekKe = 0.5368f / 0.9778f, CheekCe = 1.5126f / 1.9470f;
-		const float GlacisKe = 0.880f / 0.9508f, GlacisCe = 1.0f / 1.1416f;
+		const float GlacisKe = 0.880f / 0.9823f, GlacisCe = 1.0f / 1.1416f;
 		internal static MelonPreferences_Entry<string> Preset;
-		internal static void CreatePreset(MelonPreferences_Category cfg) => Preset = ArmourPresets.Create(cfg, "game-scale (default: matched to GHPC's other tanks; turret 744/984, glacis 473/653 without ERA) or source-only (open-source figures; turret 620/900, glacis 430/566). For T-80UM2s spawned after the change.");
+		internal static void CreatePreset(MelonPreferences_Category cfg) => Preset = ArmourPresets.Create(cfg, "game-scale (default: matched to GHPC's other tanks; turret 744/984, glacis 485/653 without ERA) or source-only (open-source figures; turret 620/900, glacis 430/566). For T-80UM2s spawned after the change.");
 		static readonly ArmourPresets.Pair Presets = new ArmourPresets.Pair(ArmourPresets.GameScale, c =>
 			c.Variable && c.Piece == "composite_armor_turret_01_dm" ? (CheekKe, CheekCe)
 			: c.Variable && Array.IndexOf(GlacisStack, c.Piece) >= 0 ? (GlacisKe, GlacisCe)

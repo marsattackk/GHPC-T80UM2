@@ -87,6 +87,7 @@ namespace T80UM2.Common
 			public float FragReach = 1.5f;
 			public float ConeHalf = 15f, ConeReach = 3f;
 			public float Cooldown = 0.35f, OtherSide = 0.035f;
+			public bool PickTube;
 		}
 
 		internal static float BurstRange(Geometry g, Block b, V3 p, V3 d)
@@ -107,6 +108,18 @@ namespace T80UM2.Common
 			{
 				Rounds = new int[g.Blocks.Length]; Lost = new bool[g.Blocks.Length];
 				for (int i = 0; i < Rounds.Length; i++) Rounds[i] = g.Blocks[i].Rounds;
+				Drawn = new int[g.Blocks.Length, g.Blocks.Length];
+			}
+
+			public int[,] Drawn;
+			public int SectorLeft(Geometry g, int sector) { int n = g.Blocks[sector].Rounds; for (int b = 0; b < Rounds.Length; b++) n -= Drawn[sector, b]; return n; }
+
+			public void Reload(int block)
+			{
+				Rounds[block]++;
+				int s = Drawn[block, block] > 0 ? block : -1;
+				for (int i = 0; i < Rounds.Length && s < 0; i++) if (Drawn[i, block] > 0) s = i;
+				if (s >= 0) Drawn[s, block]--;
 			}
 
 			public int SideRounds(Geometry g, int side) { int n = 0; for (int i = 0; i < Rounds.Length; i++) if (g.Blocks[i].Side == side && !Lost[i]) n += Rounds[i]; return n; }
@@ -118,6 +131,7 @@ namespace T80UM2.Common
 		{
 			public float SeenAt = -1f;
 			public int Block = -1;
+			public int Sector = -1;
 			public bool Committed, Done;
 			public float BurstAt;
 			public V3 BurstPoint;
@@ -146,6 +160,21 @@ namespace T80UM2.Common
 		}
 
 		static bool HasStart(Geometry g, float az) { foreach (var b in g.Blocks) if (b.AzMin == az) return true; return false; }
+
+		internal static int PickBlock(Geometry g, State s, V3 p, V3 d, float az)
+		{
+			int best = -1; float bestWide = float.PositiveInfinity;
+			for (int i = 0; i < g.Blocks.Length; i++)
+			{
+				if (s.Lost[i] || s.Rounds[i] <= 0) continue;
+				var b = g.Blocks[i];
+				var B = b.Burst(BurstRange(g, b, p, d));
+				if (!Field(g, p, d, B, b.Axis, out _, out float sLeave) || sLeave < 0f) continue;
+				float w = Wide(p, d, B);
+				if (w < bestWide) { bestWide = w; best = i; }
+			}
+			return best >= 0 ? best : BlockFor(g, az);
+		}
 
 		internal static bool Sphere(V3 p, V3 d, V3 c, float r, out float sIn, out float sOut)
 		{
@@ -191,7 +220,10 @@ namespace T80UM2.Common
 				if (el < g.ElMin || el > g.ElMax || BlockFor(g, az) < 0) return Drop(t, res, $"not engaged (bearing {az:+0.0;-0.0}, el {el:+0.0;-0.0}: outside every sector)");
 				if (ready != null) return Drop(t, res, $"not engaged ({ready})");
 				if (range + speed * dt < g.MinRange) return Drop(t, res, $"too close (track at {range:0.0} m, {range + speed * dt:0.0} m a frame before < {g.MinRange:0} m)");
-				t.Block = BlockFor(g, az);
+				t.Sector = BlockFor(g, az);
+				if (g.PickTube && s.SectorLeft(g, t.Sector) <= 0)
+					return Drop(t, res, $"not engaged ({g.Blocks[t.Sector].Rounds} rounds already fired from this direction, the {g.Blocks[t.Sector].Name} sector)");
+				t.Block = g.PickTube ? PickBlock(g, s, p, d, az) : t.Sector;
 				if (s.Lost[t.Block]) return Drop(t, res, $"not engaged (block {g.Blocks[t.Block].Name} lost)");
 				if (s.Rounds[t.Block] <= 0) return Drop(t, res, $"not engaged (no rounds left in block {g.Blocks[t.Block].Name}, {s.SideRounds(g, g.Blocks[t.Block].Side)} on that side)");
 				res.Act = Act.Seen;
@@ -219,13 +251,15 @@ namespace T80UM2.Common
 				float leaveAt = now + sLeave / speed;
 				if (launch + flight > leaveAt + 1e-5f)
 				{
-					string cause = launch == react || launch == want || launch == now - dt
+					bool busy = Math.Max(own, near) > Math.Max(Math.Max(want, now - dt), react) + 1e-6f;
+					string cause = !busy
 						? $"late (track {now - t.SeenAt:0.000} s, {sLeave / speed:0.000} s left in the fragment field's reach, reaction {g.ReactionTime:0.000} + flight {flight:0.000} s)"
 						: $"busy (the {(launch == own ? "side's" : "other side's")} last launch {now - Math.Max(s.SideFired[blk.Side], s.SideFired[other]):0.000} s ago)";
 					return Drop(t, res, cause);
 				}
 				if (launch > now + dt) return res;
 				s.Rounds[t.Block]--;
+				if (g.PickTube) s.Drawn[t.Sector, t.Block]++;
 				s.SideFired[blk.Side] = launch;
 				t.Committed = true; t.BurstAt = launch + flight; t.BurstPoint = B; t.BurstRange = burstRange;
 				res.Act = Act.Fire; res.Fired = true;
@@ -254,11 +288,21 @@ namespace T80UM2.Common
 		static bool Field(Geometry g, V3 p, V3 d, V3 B, V3 axis, out float sHit, out float sLeave)
 		{
 			if (Sphere(p, d, B, g.FragReach, out float i0, out float o0)) { sHit = 0.5f * (i0 + o0); sLeave = o0; return true; }
-			if (Sphere(p, d, B, g.ConeReach, out float a, out float b) && InField(g, p + d * Math.Max(0f, a), B, axis))
+			if (Sphere(p, d, B, g.ConeReach, out float a, out float b))
 			{
-				sLeave = Math.Min(b, V3.Dot(B - p, d));
-				sHit = 0.5f * (a + sLeave);
-				return true;
+				const int n = 48;
+				int inside = -1;
+				for (int i = 0; i <= n && inside < 0; i++) if (InField(g, p + d * (a + (b - a) * i / n), B, axis)) inside = i;
+				if (inside >= 0)
+				{
+					float At(int i) => a + (b - a) * i / n;
+					float Edge(float sIn, float sOut) { for (int k = 0; k < 20; k++) { float m = 0.5f * (sIn + sOut); if (InField(g, p + d * m, B, axis)) sIn = m; else sOut = m; } return sIn; }
+					float s0 = inside == 0 ? a : Edge(At(inside), At(inside - 1));
+					int last = inside; while (last < n && InField(g, p + d * At(last + 1), B, axis)) last++;
+					float s1 = last == n ? b : Edge(At(last), At(last + 1));
+					sLeave = s1; sHit = 0.5f * (s0 + s1);
+					return true;
+				}
 			}
 			sHit = sLeave = 0f;
 			return false;

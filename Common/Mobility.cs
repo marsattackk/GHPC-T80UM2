@@ -15,6 +15,7 @@ namespace T80UM2.Common
 			public float? MaxRpm;
 			public float? FinalDrive;
 			public float? ShiftUpRpm;
+			public float[] ForwardGears;
 			public float[] ReverseGears;
 			public float? MaxForwardKmh;
 			public float? ReverseCapKmh;
@@ -41,6 +42,7 @@ namespace T80UM2.Common
 				}
 				// Keep it under max rpm, the fuel cut never lets the engine reach it otherwise.
 				if (s.ShiftUpRpm.HasValue) vc.transmission.targetShiftUpRPM = s.ShiftUpRpm.Value;
+				if (s.ForwardGears != null) vc.transmission.ForwardGears = new List<float>(s.ForwardGears);
 				if (s.ReverseGears != null) vc.transmission.ReverseGears = new List<float>(s.ReverseGears);
 			}
 			var chassis = vehicle.GetComponent<NwhChassis>();

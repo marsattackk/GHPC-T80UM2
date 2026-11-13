@@ -6,6 +6,7 @@ using GHPC;
 using GHPC.Equipment;
 using GHPC.Utility;
 using GHPC.Vehicle;
+using GHPC.Weapons;
 using HarmonyLib;
 using UnityEngine;
 
@@ -13,6 +14,25 @@ namespace T80UM2.Common
 {
 	internal static class DmArmourApply
 	{
+		internal sealed class ImportedCompartment : MonoBehaviour { }
+
+		[HarmonyPatch(typeof(LiveRound), "penCheck")]
+		static class CompartmentAdvance
+		{
+			static void Postfix(LiveRound __instance, Collider cObject, Vector3 roundPath, Vector3 impactPoint, bool __result)
+			{
+				try
+				{
+					if (!__result || cObject == null || cObject.GetComponent<ImportedCompartment>() == null) return;
+					var direction = roundPath.normalized;
+					float progress = Vector3.Dot(__instance.transform.position - impactPoint, direction);
+					if (progress >= 0.01f) return;
+					__instance.transform.position += direction * (0.01f - progress);
+				}
+				catch (System.Exception e) { PatchGuard.Failed("Imported compartment advance", e); }
+			}
+		}
+
 		internal static readonly (string group, string bone, string colliders)[] T72Groups =
 		{
 			("HULL", "---MESH---/HULL", "HULL COLLIDERS"),
@@ -27,7 +47,15 @@ namespace T80UM2.Common
 			("GUN", BaseRigT80B.GunPath, "T-80 GUN COLLIDERS"),
 		};
 
+		internal static readonly (string group, string bone, string colliders)[] M60A1Groups =
+		{
+			("HULL", BaseRigM60A1.HullPath, BaseRigM60A1.HullGroup),
+			("TURRET", BaseRigM60A1.TurretPath, BaseRigM60A1.TurretGroup),
+			("GUN", BaseRigM60A1.GunPath, BaseRigM60A1.GunGroup),
+		};
+
 		internal static (string group, string bone, string colliders)[] GroupsFor(Transform root) =>
+			root.Find(BaseRigM60A1.HullPath) != null ? M60A1Groups :
 			root.Find(T72Groups[0].bone) != null || root.Find(BaseRigT80B.HullPath) == null ? T72Groups : T80BGroups;
 
 		internal static void Apply(Vehicle vehicle, GameObject prefab, DmArmour values, string tag, List<string> problems, StringBuilder table = null,

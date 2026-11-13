@@ -76,7 +76,7 @@ Here's how the four line up in game:
 | | T-80B (vanilla) | **T-80UM2 (this mod)** | [T-90A](https://github.com/marsattackk/GHPC-T90A) (my mod) | [T-90M](https://github.com/marsattackk/GHPC-T90M) (my mod) |
 |---|---|---|---|---|
 | Turret cheeks, no ERA (vs APFSDS / HEAT) | 595 / 669 | **744 / 984** | 690 / 819 | 690 / 820 |
-| Upper glacis, no ERA (vs APFSDS / HEAT) | 485 / 602 | **473 / 653** | 549 / 748 | 552 / 752 |
+| Upper glacis, no ERA (vs APFSDS / HEAT) | 485 / 602 | **485 / 653** | 549 / 748 | 552 / 752 |
 | ERA | none | **Kontakt-5**, about +140 / +550 | Kontakt-5, about +140 / +550 | Relikt, about +250 / +650, plus nets and slats |
 | Protection system | none | **Drozd**: shoots incoming missiles, grenades and HEAT shells down, front ±40° | Shtora-1: IR jammer, laser warning, aerosol screens | TShU-1-2M: laser warning, aerosol screens |
 | Gun | 2A46-2, -5° / +15° | **2A46M-1**, -5° / +14° (-4° over the engine deck) | 2A46M-5, -6° / +14° | 2A46M-5, -6° / +14° |
@@ -160,11 +160,18 @@ the turret front, two launcher blocks and a radar head each side, with their red
 It's on when the tank spawns and it works by itself. Each side has its own radar head and two twin blocks, so 4
 rounds a side, 8 in all, covering 40° either side of where the turret points in four 20° sectors.
 
+<p align="center">
+  <img src="docs/images/drozd_coverage.jpg" width="80%" alt="What the Drozd covers, seen from above">
+</p>
+
 - **What it shoots at**: anything coming in between 70 and 700 m/s, so ATGMs, RPG grenades, HEAT and HE shells.
   **Not APFSDS**, it's far too fast, same as the real one.
 - **How**: the radar picks it up about 130 m out, the block fires a round that bursts 6-8 m in front of the tank and
-  throws a cone of fragments into its path. Missiles go down every time (that's what the 1980s trials gave), grenades
-  and shells most of the time.
+  throws a cone of fragments into its path. The computer picks whichever tube's burst the missile will fly through, so
+  shots at the glacis get caught too, but it's still two rounds per sector. Missiles go down every time (that's what
+  the 1980s trials gave), grenades and shells most of the time.
+- **What it can't see**: below -6° or above +20°, so a low shot from close in or a top attack gets through, and
+  nothing on the sides or rear.
 - **Each side** needs 0.35 s before it can fire again, so two missiles at once on the same side can still get through.
   The other side doesn't care, it's got its own radar.
 - **It's not friendly to infantry.** The fragments go forward, and anyone standing in front of the tank when it fires
@@ -294,8 +301,8 @@ T-80U, btvt.info, manuals and the like):
 - **The engine sub-type.** No source names this tank's engine, the GTD-1250 is what T-80Us had from 1990.
 - **The loader taking long rods**, so 3BM59 and 3BM60 at all. 3BM59's penetration is a guess too, worked out from the
   3BM60's.
-- **Drozd's details**: its 0.02 s reaction (worked back from an 11 m trial shot), which block takes which sector, how
-  often a kill only breaks the threat up instead of setting it off (1 in 4), and its 25 mm housings.
+- **Drozd's details**: its 0.02 s reaction (worked back from an 11 m trial shot), which block takes which sector, how far
+  its fragments do damage (5 m ahead of the burst), how often a kill only breaks the threat up instead of setting it off (1 in 4), and its 25 mm housings.
 - **The mass** (the T-80U's 46 t plus the Drozd kit), the mantlet's armour, the anti-radiation lining (the T-64A's),
   where the APU and the fender tanks go, where the 12 hand-stowed rounds sit, the NSVT's speeds and box change time,
   the Buran-PA's reticle, the TKN-4S night field of view and the Dubl convergence range.
@@ -365,8 +372,8 @@ In the vehicle menu: Drozd's on / off switch and its reload.
 
 The open-source figures for the T-80U's turret (620 / 900 on the cheeks, 430 / 566 on the glacis) would put it below
 where GHPC's own tanks sit, because the game's vanilla T-80B and T-72M1 come out about 10-20 % above their own published
-figures. So by default the T-80UM2 gets the same step up the T-90A got (744 / 984 cheeks, 473 / 653 glacis), which keeps
-the three in the right order next to each other. Set `Armour preset` to `"source-only"` for the plain published figures.
+figures. So by default the T-80UM2 gets the same step up the T-90A got on the cheeks (744 / 984), and the glacis matches the
+vanilla T-80B's against APFSDS (485 / 653), which keeps the three in the right order next to each other. Set `Armour preset` to `"source-only"` for the plain published figures.
 Only the strength changes, not the layout, and Kontakt-5 is the same in both.
 
 </details>

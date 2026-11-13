@@ -84,7 +84,8 @@ namespace T80UM2.Common
 				var aar = part.OtherAarTransforms ?? new Transform[0];
 				if (!aar.Contains(swing)) part.OtherAarTransforms = aar.Concat(new[] { swing }).ToArray();
 			}
-			if (map.RunningGear == "port")
+			if (map.RunningGear == "follow") GearFollow.Apply(root, map, prefix, Find);
+			else if (map.RunningGear == "port")
 			{
 				foreach (var g in map.GearParts)
 				{

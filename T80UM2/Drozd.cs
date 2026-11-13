@@ -39,7 +39,8 @@ namespace T80UM2
 			InterceptRange = 6.7f,
 			BurstMin = 6f, BurstMax = 8f,
 			FragReach = 1.5f,
-			ConeReach = 3f,
+			ConeReach = 5f,            // mine: no source gives the field's reach; 5 m is where ~1 fragment still meets a missile
+			PickTube = true,
 			Cooldown = 0.35f,
 			OtherSide = 0.035f,
 			VisualPrefix = "T80UM2_",
@@ -48,7 +49,7 @@ namespace T80UM2
 			PGrenade = 0.7f,
 			PBrokenUp = 0.25f,   // mine, no source gives a split between broken up and set off
 			WarheadFragShare = 0.25f,   // mine: a warhead set off by our fragments throws a quarter of GHPC's own count
-			FragCount = 60, FragConeHalf = 15f,
+			FragCount = 230, FragConeHalf = 30f,
 			FragSpeed = 1600f,
 			FragMass = 0.003f,
 			FragArea = 4.86e-5f, FragCoeff = 0.6f, FragPen = 6f, FragPenSpeed = 1200f,

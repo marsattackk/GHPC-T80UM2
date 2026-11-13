@@ -41,6 +41,7 @@ namespace T80UM2.Common
 			public float ElMin = -6f, ElMax = 20f, SearchRange = 330f, TrackRange = 130f, MinRange = 11f;
 			public float SpeedMin = 70f, SpeedMax = 700f, SizeMin = 0.036f, ReactionTime = 0.02f;
 			public float RoundSpeed = 190f, InterceptRange = 6.7f, BurstMin = 6f, BurstMax = 8f, FragReach = 1.5f, ConeReach = 3f, Cooldown = 0.35f, OtherSide = 0.035f;
+			public bool PickTube;
 			public string VisualPrefix;
 			public float ProtectMargin = 0f;
 			public float HeadingSmoothing = 0.15f;
@@ -105,7 +106,7 @@ public int Id;
 					ElMin = s.ElMin, ElMax = s.ElMax, TrackRange = s.TrackRange, MinRange = s.MinRange,
 					SpeedMin = s.SpeedMin, SpeedMax = s.SpeedMax, SizeMin = s.SizeMin, ReactionTime = s.ReactionTime,
 					RoundSpeed = s.RoundSpeed, InterceptRange = s.InterceptRange, BurstMin = s.BurstMin, BurstMax = s.BurstMax, FragReach = s.FragReach,
-					ConeHalf = s.FragConeHalf, ConeReach = s.ConeReach, Cooldown = s.Cooldown, OtherSide = s.OtherSide,
+					ConeHalf = s.FragConeHalf, ConeReach = s.ConeReach, Cooldown = s.Cooldown, OtherSide = s.OtherSide, PickTube = s.PickTube,
 					Blocks = s.Blocks.Select(b =>
 					{
 						var m = Vector3.zero; foreach (var p in b.Mouths) m += Local(p); m /= Mathf.Max(1, b.Mouths.Length);
@@ -295,7 +296,7 @@ public int Id;
 					if (ReloadLeft > 0f) return;
 					int i;
 					for (i = 0; i < St.Rounds.Length; i++) if (!St.Lost[i] && St.Rounds[i] < G.Blocks[i].Rounds) break;
-					if (i < St.Rounds.Length) { St.Rounds[i]++; ShowCaps(); }
+					if (i < St.Rounds.Length) { St.Reload(i); ShowCaps(); }
 					if (Empty == 0) StopReload("done");
 					else ReloadLeft = S.ReloadPerRound;
 				}
@@ -389,7 +390,8 @@ public int Id;
 				var seg = hitWorld - from;
 				if (seg.sqrMagnitude > 1e-6f && Physics.Raycast(from, seg.normalized, out var block, seg.magnitude, ~(1 << 2), QueryTriggerInteraction.Ignore) && !OwnCollider(block.collider))
 				{
-					w.T.Why = $"{w.T.Why}; burst, but {block.collider.name} between the threat and the burst point: no effect";
+					var owner = block.collider.GetComponentInParent<Unit>();
+					w.T.Why = $"{w.T.Why}; burst, but {block.collider.name}{(owner != null ? $" (of {owner.name})" : "")} at {Vehicle.transform.InverseTransformPoint(block.point):F1} (unit frame) between the threat and the burst point: no effect";
 					Blast.Play(burstWorld, Blast.Size.ApsBurst);
 					Fragments(burstWorld, axisWorld);
 					r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w)}: {block.collider.name} in the way, no effect");

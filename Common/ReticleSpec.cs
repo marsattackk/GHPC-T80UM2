@@ -41,20 +41,21 @@ namespace T80UM2.Common
 		internal readonly List<ScreenItem> Screen = new List<ScreenItem>();
 		internal readonly List<string> Problems = new List<string>();
 		readonly Env _globals = new Env(null);
+		IDictionary<string, double> _varOverrides;
 		internal double[] Nums(string name) => ((List<object>)_globals.Get(name)).Select(v => ToNum(v, name)).ToArray();
 
-		internal static ReticleSpec FromResource(System.Reflection.Assembly asm, string resource)
+		internal static ReticleSpec FromResource(System.Reflection.Assembly asm, string resource, IDictionary<string, double> vars = null)
 		{
 			using (var s = asm.GetManifestResourceStream(resource))
 			{
 				if (s == null) throw new ArgumentException($"no embedded resource '{resource}'");
-				using (var r = new System.IO.StreamReader(s, Encoding.UTF8)) return Parse(r.ReadToEnd(), resource);
+				using (var r = new System.IO.StreamReader(s, Encoding.UTF8)) return Parse(r.ReadToEnd(), resource, vars);
 			}
 		}
 
-		internal static ReticleSpec Parse(string text, string source)
+		internal static ReticleSpec Parse(string text, string source, IDictionary<string, double> vars = null)
 		{
-			var spec = new ReticleSpec { Source = source };
+			var spec = new ReticleSpec { Source = source, _varOverrides = vars };
 			var root = new Json(text, source).Read() as JObj ?? throw new FormatException(source + ": the top level must be an object");
 			spec.Load(root);
 			return spec;
@@ -71,7 +72,8 @@ namespace T80UM2.Common
 			_globals.Set("Fov", Fov);
 			_globals.Set("PI", Math.PI);
 			if (root["vars"] is JObj vars)
-				foreach (var kv in vars.Items) _globals.Set(kv.Key, Value(kv.Value, _globals, "vars." + kv.Key));
+				foreach (var kv in vars.Items)
+					_globals.Set(kv.Key, _varOverrides != null && _varOverrides.TryGetValue(kv.Key, out var over) ? over : Value(kv.Value, _globals, "vars." + kv.Key));
 			if (root["defs"] is JObj defs)
 				foreach (var kv in defs.Items) _defs[kv.Key] = kv.Value as JObj ?? throw new FormatException($"{Source}: defs.{kv.Key} must be an object");
 			if (root["lights"] is JObj lights)

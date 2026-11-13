@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -26,11 +27,11 @@ namespace T80UM2.Common
 			return spec;
 		}
 
-		internal ReticleSO Build(string file, ReticleSO host, ReticleSO fontHost, Dictionary<string, AmmoCodexScriptable> rounds)
+		internal ReticleSO Build(string file, ReticleSO host, ReticleSO fontHost, Dictionary<string, AmmoCodexScriptable> rounds, Dictionary<string, double> vars = null)
 		{
-			string key = file + RoundsKey(rounds);
+			string key = file + RoundsKey(rounds) + (vars == null ? "" : "|" + string.Join("|", Enumerable.Select(Enumerable.OrderBy(vars, kv => kv.Key, StringComparer.Ordinal), kv => kv.Key + "=" + kv.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture))));
 			if (_built.TryGetValue(key, out var so) && so != null) return so;
-			var spec = Spec(file);
+			var spec = vars == null ? Spec(file) : ReticleSpec.FromResource(_assembly, file, vars);
 			var problems = new List<string>();
 			so = ReticleBuild.Build(spec, host, ReticleBuild.FontTemplate(fontHost), k => rounds != null && rounds.TryGetValue(k, out var a) ? a : null, problems);
 			foreach (var p in problems) MelonLogger.Warning($"{_tag} reticle '{spec.Name}': {p}");
@@ -38,6 +39,6 @@ namespace T80UM2.Common
 		}
 
 		static string RoundsKey(Dictionary<string, AmmoCodexScriptable> rounds) => rounds == null || rounds.Count == 0 ? ""
-			: "|" + string.Join("|", Enumerable.Select(Enumerable.OrderBy(rounds, kv => kv.Key, System.StringComparer.Ordinal), kv => kv.Key + "=" + (kv.Value != null ? kv.Value.name : "-")));
+			: "|" + string.Join("|", Enumerable.Select(Enumerable.OrderBy(rounds, kv => kv.Key, StringComparer.Ordinal), kv => kv.Key + "=" + (kv.Value != null ? kv.Value.name : "-")));
 	}
 }

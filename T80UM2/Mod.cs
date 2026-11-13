@@ -6,7 +6,7 @@ using MelonLoader.Utils;
 using T80UM2.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T80UM2.T80UM2Mod), "T-80UM2", "0.1.0", "marsattackk")]
+[assembly: MelonInfo(typeof(T80UM2.T80UM2Mod), "T-80UM2", "0.1.1", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
 
 namespace T80UM2

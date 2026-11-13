@@ -262,6 +262,8 @@ namespace T80UM2.Common
 				foreach (var p in gated)
 				{
 					if (p == null || p.Transform == null) continue;
+					// A traverse drive in GatedAimablePlatforms kept this gate shut for good after a lase: measure elevation drives only.
+					if (p.Axis == GHPC.Utility.EnumHelpers.Axis3.Y) continue;
 					Vector3 right = p.Transform.right;
 					float a = Vector3.Angle(Vector3.ProjectOnPlane(lay, right), Vector3.ProjectOnPlane(p.Transform.forward, right));
 					if (a > worst) worst = a;

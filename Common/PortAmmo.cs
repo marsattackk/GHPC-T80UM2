@@ -14,6 +14,7 @@ using MelonLoader;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
+using GHPC.Effects;
 using System.IO;
 using TMPro;
 
@@ -26,6 +27,8 @@ namespace T80UM2.Common
 			public string Id;
 			public string Name;
 			public string Source;
+			public string SourceUnit;
+			public string ModelFrom;
 			public Action<AmmoType> Set;
 			public float Prevalence = 1f;
 			public int AfterMissions;
@@ -33,6 +36,8 @@ namespace T80UM2.Common
 			public string Texture;
 			public string Atlas;
 			public string Shape;
+			public ChargeSplit Charge;
+			public bool RackTntIsFiller;
 		}
 
 		internal sealed class Rack
@@ -41,6 +46,7 @@ namespace T80UM2.Common
 			public int[] Counts;
 			public int[] MissileSlots = new int[0];
 			public bool NoRestockInto;
+			public bool BurstsInParent;
 		}
 
 		internal sealed class Settings
@@ -54,6 +60,7 @@ namespace T80UM2.Common
 			public string ApfsdsListName;
 			public string MenuSuffix;
 			public string FixedHeat = "clip_3BK18M";
+			public Round Heat;
 			public Round Missile;
 			public Round[] Extra = new Round[0];
 			public string[] EraDefeating = new string[0];
@@ -65,6 +72,8 @@ namespace T80UM2.Common
 			public bool BeamOnBaseUnit;
 			public string CoaxFeed = "PKT";
 			public int CoaxRounds, CoaxBelt = 250;
+			public bool SingleRound;
+			public bool NoBaseHe;
 		}
 
 		internal static Settings S;
@@ -83,24 +92,34 @@ namespace T80UM2.Common
 		{
 			if (_built) return true;
 			if (S == null) return false;
-			var list = OwnLoad(UnitRegistry.Find(S.SourceUnit)?.BaseAmmoClipsReference);
-			var clips = list?.AmmoClips ?? new AmmoClipCodexScriptable[0];
-			AmmoType SourceOf(Round r) => clips.FirstOrDefault(c => c.name == r.Source)?.ClipType.MinimalPattern[0].AmmoType;
-			Heat = clips.FirstOrDefault(c => c.name == S.FixedHeat);
-			var missing = S.Apfsds.Concat(S.Missile != null ? new[] { S.Missile } : new Round[0]).Concat(S.Extra).Where(r => SourceOf(r) == null).Select(r => r.Source).ToList();
-			if (Heat == null) missing.Add(S.FixedHeat);
+			AmmoClipCodexScriptable[] ClipsOf(string unit) => OwnLoad(UnitRegistry.Find(unit)?.BaseAmmoClipsReference)?.AmmoClips ?? new AmmoClipCodexScriptable[0];
+			var clips = ClipsOf(S.SourceUnit);
+			AmmoType Find(string unit, string clip) => (unit == null ? clips : ClipsOf(unit)).FirstOrDefault(c => c.name == clip)?.ClipType.MinimalPattern[0].AmmoType;
+			AmmoType SourceOf(Round r) => Find(r.SourceUnit, r.Source);
+			AmmoType ModelOfRound(Round r)
+			{
+				if (string.IsNullOrEmpty(r.ModelFrom)) return null;
+				int colon = r.ModelFrom.IndexOf(':');
+				return colon < 0 ? Find(null, r.ModelFrom) : Find(r.ModelFrom.Substring(0, colon), r.ModelFrom.Substring(colon + 1));
+			}
+			Heat = S.Heat == null ? clips.FirstOrDefault(c => c.name == S.FixedHeat) : null;
+			var ported = S.Apfsds.Concat(S.Heat != null ? new[] { S.Heat } : new Round[0]).Concat(S.Missile != null ? new[] { S.Missile } : new Round[0]).Concat(S.Extra).ToList();
+			var missing = ported.Where(r => SourceOf(r) == null).Select(r => r.Source)
+				.Concat(ported.Where(r => !string.IsNullOrEmpty(r.ModelFrom) && ModelOfRound(r)?.VisualModel == null).Select(r => r.ModelFrom)).ToList();
+			if (S.Heat == null && Heat == null && !S.SingleRound) missing.Add(S.FixedHeat);
 			if (missing.Count > 0 || S.Apfsds.Length == 0)
 			{
 				MelonLogger.Warning($"{S.Tag} ammo: vanilla {string.Join(", ", missing)} not loaded yet; keeping base ammo.");
 				return false;
 			}
-			foreach (var r in S.Apfsds) Apfsds[r.Id] = MakeClip(r, SourceOf(r));
+			foreach (var r in S.Apfsds) Apfsds[r.Id] = MakeClip(r, SourceOf(r), ModelOfRound(r));
+			if (S.Heat != null) Heat = MakeClip(S.Heat, SourceOf(S.Heat), ModelOfRound(S.Heat));
 			if (S.Missile != null)
 			{
-				Missile = MakeClip(S.Missile, SourceOf(S.Missile));
+				Missile = MakeClip(S.Missile, SourceOf(S.Missile), ModelOfRound(S.Missile));
 			}
 			Extras.Clear();
-			foreach (var r in S.Extra) Extras.Add(MakeClip(r, SourceOf(r)));
+			foreach (var r in S.Extra) Extras.Add(MakeClip(r, SourceOf(r), ModelOfRound(r)));
 			ApfsdsSet = MakeApfsdsSet();
 			_built = true;
 			return true;
@@ -173,7 +192,8 @@ namespace T80UM2.Common
 
 		static List<AmmoClipCodexScriptable> PortList(IEnumerable<AmmoClipCodexScriptable> baseClips, AmmoClipCodexScriptable ap)
 		{
-			var list = baseClips.Take(3).ToList();
+			if (S.SingleRound) return new List<AmmoClipCodexScriptable> { ap };
+			var list = baseClips.Take(S.NoBaseHe ? 2 : 3).ToList();
 			list[0] = ap;
 			list[1] = Heat;
 			if (Missile != null) list.Add(Missile);
@@ -188,7 +208,7 @@ namespace T80UM2.Common
 			preferred = null;
 			if (!Build()) return null;
 			var list = baseList?.Asset as VehicleAmmoListScriptable ?? OwnLoad(baseList);
-			if (list?.AmmoClips == null || list.AmmoClips.Length < 3) return null;
+			if (list?.AmmoClips == null || list.AmmoClips.Length < (S.SingleRound ? 1 : 3)) return null;
 			var clips = PortList(list.AmmoClips, DefaultApfsds(warn: false));
 			clips.Remove(Heat);
 			var sets = new List<AmmoLogisticsScriptable>();
@@ -219,8 +239,9 @@ namespace T80UM2.Common
 			}
 		}
 
-		static AmmoClipCodexScriptable MakeClip(Round r, AmmoType source)
+		static AmmoClipCodexScriptable MakeClip(Round r, AmmoType source, AmmoType modelSource = null)
 		{
+			var model = modelSource?.VisualModel ?? source.VisualModel;
 			var ammo = new AmmoType();
 			foreach (var f in typeof(AmmoType).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
 				if (!f.IsLiteral && !f.IsInitOnly) f.SetValue(ammo, f.GetValue(source));
@@ -238,14 +259,16 @@ namespace T80UM2.Common
 			clipCodex.name = $"clip_{S.Prefix}_{r.Id}";
 			clipCodex.ClipType = clip;
 
-			if (source.VisualModel != null)
+			if (model != null)
 			{
-				var visual = Object.Instantiate(source.VisualModel, ModelHolder, false);
+				var visual = Object.Instantiate(model, ModelHolder, false);
 				visual.name = r.Id + " visual";
 				var stored = visual.GetComponent<AmmoStoredVisual>();
 				if (stored != null) { stored.AmmoType = ammo; stored.AmmoScriptable = codex; }
 				ApplyLook(visual, r);
 				ApplyShape(visual, r);
+				ApplyCharge(visual, r);
+				ApplyRackTnt(visual, r, ammo);
 				ammo.VisualModel = visual;
 			}
 			return clipCodex;
@@ -280,8 +303,73 @@ namespace T80UM2.Common
 			}
 		}
 
+		internal sealed class ChargeSplit
+		{
+			public string[] Parts;
+			public string Projectile;
+		}
+
+		static void ApplyCharge(GameObject model, Round r)
+		{
+			if (r.Charge == null) return;
+			var stored = model.GetComponent<AmmoStoredVisual>();
+			var all = model.GetComponentsInChildren<Transform>(true);
+			var parts = r.Charge.Parts.Select(p => all.FirstOrDefault(t => t != model.transform && ShapePartIs(model, t, p))).ToArray();
+			if (stored == null || parts.Any(p => p == null)) { MelonLogger.Warning($"{S.Tag}: the {r.Id} model has no such charge parts; it stays one piece."); return; }
+			var keep = r.Charge.Projectile != null ? all.FirstOrDefault(t => ShapePartIs(model, t, r.Charge.Projectile)) : null;
+			if (keep != null)
+			{
+				var from = keep.parent.GetComponent<AarVisual>();
+				keep.SetParent(model.transform, true);
+				if (from != null && keep.GetComponent<AarVisual>() == null)
+				{
+					var aar = keep.gameObject.AddComponent<AarVisual>();
+					aar.RenderMode = from.RenderMode; aar.SwitchMaterials = from.SwitchMaterials; aar.PreserveLayerUntilAar = from.PreserveLayerUntilAar;
+					aar.HideUntilAar = from.HideUntilAar; aar.AarMaterial = from.AarMaterial;
+				}
+			}
+			var charge = new GameObject(r.Id + " charge");
+			charge.layer = model.layer;
+			charge.transform.SetParent(model.transform, false);
+			foreach (var p in parts) p.SetParent(charge.transform, true);
+			stored.ChargeVisual = charge.transform;
+		}
+
+		static readonly FieldInfo ItemTnt = Reflect.Field(typeof(FlammableItem), "_tntEquivalent");
+
+		static void ApplyRackTnt(GameObject model, Round r, AmmoType ammo)
+		{
+			if (!r.RackTntIsFiller) return;
+			var items = model.GetComponentsInChildren<FlammableItem>(true).Where(i => i.Explosive).ToList();
+			if (items.Count == 0) { MelonLogger.Warning($"{S.Tag}: the {r.Id} model has no explosive part; its rack detonation stays as the source round's."); return; }
+			foreach (var item in items) ItemTnt.SetValue(item, ammo.TntEquivalentKg);
+		}
+
+		static readonly AccessTools.FieldRef<GHPC.Weapons.AmmoRack, Compartment> RackRoom =
+			Reflect.FieldRefAccess<GHPC.Weapons.AmmoRack, Compartment>("_compartment");
+
+		static void BurstInParent(GHPC.Weapons.AmmoRack rack)
+		{
+			var room = RackRoom(rack);
+			var parent = room != null ? room.Parent : null;
+			var cluster = rack.Flammables;
+			if (parent == null) { MelonLogger.Warning($"{S.Tag}: rack '{rack.name}' is not in a child compartment; its burst stays as it was."); return; }
+			if (room.Clusters.RemoveAll(c => c == cluster) == 0) { MelonLogger.Warning($"{S.Tag}: rack '{rack.name}' has not joined its compartment yet; its burst stays as it was."); return; }
+			if (!parent.Clusters.Contains(cluster)) parent.AddChildCluster(cluster);
+			cluster.RegisterCompartment(parent);
+			RackRoom(rack) = parent;
+		}
+
 		static readonly Dictionary<string, Mesh> _shapeMeshes = new Dictionary<string, Mesh>();
 		static string[] _shapeIndex;
+
+		static bool ShapePartIs(GameObject model, Transform t, string part)
+		{
+			if (!part.StartsWith("/")) return t.name == part;
+			var path = "";
+			for (var p = t; p != null && p != model.transform; p = p.parent) path = "/" + p.name + path;
+			return path == part;
+		}
 
 		static void ApplyShape(GameObject model, Round r)
 		{
@@ -303,7 +391,7 @@ namespace T80UM2.Common
 					{
 						var mesh = ShapeMesh(f[3], f.Length >= 7 ? f : null);
 						if (mesh == null) { missing++; continue; }
-						foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true).Where(x => x.name == f[2])) { mf.sharedMesh = mesh; meshes++; }
+						foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true).Where(x => ShapePartIs(model, x.transform, f[2]))) { mf.sharedMesh = mesh; meshes++; }
 					}
 					else if (f[0] == "capsule")
 					{
@@ -416,6 +504,7 @@ namespace T80UM2.Common
 				if (missile >= 0 && r.MissileSlots.Length > 0)
 					rl.FixedChoices = r.MissileSlots.Select(s => new LoadoutManager.RackLoadoutFixedChoice { AmmoClipIndex = missile, RackSlotIndex = s }).ToArray();
 				if (r.NoRestockInto && rl.Rack != null && rl.Rack.GetComponent<NoRestockInto>() == null) rl.Rack.gameObject.AddComponent<NoRestockInto>();
+				if (r.BurstsInParent && rl.Rack != null) BurstInParent(rl.Rack);
 				kept.Add(rl);
 			}
 			var all = lm.RackLoadouts;
@@ -453,6 +542,7 @@ namespace T80UM2.Common
 			if (S == null || !_built || vehicle == null) return;
 			var problems = new List<string>();
 			var own = Apfsds.Select(kv => (kv.Key, kv.Value)).ToList();
+			if (S.Heat != null) own.Add((S.Heat.Id, Heat));
 			if (Missile != null) own.Add((S.Missile.Id, Missile));
 			for (int i = 0; i < Extras.Count; i++) own.Add((S.Extra[i].Id, Extras[i]));
 			foreach (var (id, clip) in own)
@@ -466,10 +556,10 @@ namespace T80UM2.Common
 			var lm = vehicle.GetComponent<LoadoutManager>();
 			var clips = lm?.LoadedAmmoList?.AmmoClips;
 			if (lm == null || clips == null) { Report(vehicle, problems.Concat(new[] { "no loadout" })); return; }
-			int expected = 3 + (Missile != null ? 1 : 0) + Extras.Count;
+			int expected = S.SingleRound ? 1 : (S.NoBaseHe ? 2 : 3) + (Missile != null ? 1 : 0) + Extras.Count;
 			if (clips.Length != expected) problems.Add($"ammo list has {clips.Length} entries, expected {expected}");
 			if (clips.Length > 0 && !Apfsds.Values.Any(a => ReferenceEquals(a, clips[0]))) problems.Add($"APFSDS slot holds '{clips[0]?.ClipType?.Name}'");
-			if (clips.Length > 1 && !ReferenceEquals(clips[1], Heat)) problems.Add($"HEAT slot holds '{clips[1]?.ClipType?.Name}'");
+			if (!S.SingleRound && clips.Length > 1 && !ReferenceEquals(clips[1], Heat)) problems.Add($"HEAT slot holds '{clips[1]?.ClipType?.Name}'");
 			bool xray = AarController.ShowXray || AarController.InAar;
 			var cm = ConstantsAndInfoManager.Instance;
 			int aarLayer = cm != null ? cm.AarLayer : 15, xrayLayer = cm != null ? cm.XrayOnlyLayer : 21;

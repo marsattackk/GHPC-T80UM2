@@ -168,7 +168,7 @@ namespace T80UM2.Common
 
 		static (Transform group, Transform bone) Group(Transform root, string name)
 		{
-			var f = root.GetComponentsInChildren<LateFollow>(true).FirstOrDefault(x => x.name.IndexOf(name + " COLLIDERS", StringComparison.OrdinalIgnoreCase) >= 0 && x.FollowTarget != null);
+			var f = root.GetComponentsInChildren<LateFollow>(true).FirstOrDefault(x => RigBones.IsColliderGroup(x.name, name) && x.FollowTarget != null);
 			if (f == null) return (null, null);
 			return (f.transform.Find("AAR") ?? f.transform, f.FollowTarget);
 		}
@@ -363,7 +363,7 @@ namespace T80UM2.Common
 		{
 			string want = m.Fuel != null && m.Fuel.TryGetValue("compartment", out var cn) ? cn as string : "fighting compartment";
 			var comps = all.SelectMany(t => t.GetComponentsInChildren<Compartment>(true)).Distinct().Where(c => c.Name == want).ToList();
-			var comp = comps.FirstOrDefault(c => c.GetComponentsInParent<LateFollow>(true).Any(f => f.name.IndexOf(m.Group + " COLLIDERS", StringComparison.OrdinalIgnoreCase) >= 0)) ?? comps.FirstOrDefault();
+			var comp = comps.FirstOrDefault(c => c.GetComponentsInParent<LateFollow>(true).Any(f => RigBones.IsColliderGroup(f.name, m.Group))) ?? comps.FirstOrDefault();
 			if (comp == null) return;
 			var go = dc.gameObject;
 			go.SetActive(false);
