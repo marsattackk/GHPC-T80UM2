@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using GHPC;
+using GHPC.Effects;
 using GHPC.Equipment;
 using GHPC.Utility;
 using GHPC.Vehicle;
@@ -12,10 +13,10 @@ using UnityEngine;
 
 namespace T80UM2.Common
 {
-	internal static class DmArmourApply
+	// Builds GHPC armour from the bundle's damage-model pieces, with armour materials of my own so the game's shared
+	// ones are never touched.
+	internal static partial class DmArmourApply
 	{
-		internal sealed class ImportedCompartment : MonoBehaviour { }
-
 		[HarmonyPatch(typeof(LiveRound), "penCheck")]
 		static class CompartmentAdvance
 		{
@@ -29,7 +30,7 @@ namespace T80UM2.Common
 					if (progress >= 0.01f) return;
 					__instance.transform.position += direction * (0.01f - progress);
 				}
-				catch (System.Exception e) { PatchGuard.Failed("Imported compartment advance", e); }
+				catch (System.Exception exception) { PatchGuard.Failed("Imported compartment advance", exception); }
 			}
 		}
 
@@ -54,53 +55,176 @@ namespace T80UM2.Common
 			("GUN", BaseRigM60A1.GunPath, BaseRigM60A1.GunGroup),
 		};
 
-		internal static (string group, string bone, string colliders)[] GroupsFor(Transform root) =>
-			root.Find(BaseRigM60A1.HullPath) != null ? M60A1Groups :
-			root.Find(T72Groups[0].bone) != null || root.Find(BaseRigT80B.HullPath) == null ? T72Groups : T80BGroups;
-
-		internal static void Apply(Vehicle vehicle, GameObject prefab, DmArmour values, string tag, List<string> problems, StringBuilder table = null,
-			(string group, string bone, string colliders)[] groups = null)
+		internal static (string group, string bone, string colliders)[] GroupsFor(Transform root)
 		{
-			if (prefab == null || values == null) { problems.Add("no damage-model pieces or values in the bundle"); return; }
-			var root = vehicle.transform;
-			var inst = Object.Instantiate(prefab);
-			foreach (var (group, bonePath, token) in groups ?? GroupsFor(root))
+			return root.Find(T72Groups[0].bone) != null || root.Find(BaseRigT80B.HullPath) == null ? T72Groups : T80BGroups;
+		}
+
+		internal static (int count, string edits) Install(
+			Vehicle vehicle,
+			GameObject prefab,
+			DmArmour values,
+			VanillaEdits edits,
+			string tag,
+			List<string> problems,
+			StringBuilder table = null,
+			Dictionary<string, (Mesh mesh, Transform bone)> volumes = null)
+		{
+			var shapes = new Dictionary<string, (Mesh, Transform)>();
+			var groups = GroupsFor(vehicle.transform);
+			foreach (var (group, path, _) in groups)
 			{
-				var g = inst.transform.Find(group);
-				if (g == null) continue;
-				var bone = root.Find(bonePath);
-				var target = ArmorRoot(vehicle, token);
-				if (bone == null || target == null) { problems.Add($"{group}: no rig bone / collider group, {g.childCount} piece(s) left out"); continue; }
-				foreach (var piece in g.Cast<Transform>().ToList())
+				var source = prefab.transform.Find(group);
+				var bone = vehicle.transform.Find(path);
+				if (source == null || bone == null) continue;
+				foreach (Transform child in source)
 				{
-					string[] f = piece.name.Split('|');
-					if (f.Length < 2 || !f[0].StartsWith("dm_")) continue;
-					var e = values[f[1]];
-					if (e == null) { problems.Add($"'{f[1]}': no value, left out"); continue; }
-					if (e.Drawn)
-					{
-						piece.name = f[1];
-						Xray(piece.gameObject, e, tag);
-						Followers.PlaceOnBone(piece, bone, target);
-						continue;
-					}
-					var codex = Codex(e, tag);
-					if (codex == null) { problems.Add($"'{f[1]}': unknown material '{e.Material}', left out"); continue; }
-					piece.name = f[1];
-					Setup(piece.gameObject, e, codex, vehicle, tag);
-					Followers.PlaceOnBone(piece, bone, target);
-					table?.AppendLine($"  {group,-6} {f[1],-30} {e.Name,-42} {e.Mode,-9} {(e.Variable ? $"KE x{e.Ke:0.000}/mm HEAT x{e.Ce:0.000}/mm" : $"KE {e.Ke,4:0} mm HEAT {e.Ce,4:0} mm")}"
-						+ $"{(e.Era ? $" (after {e.KeAfter:0}/{e.CeAfter:0})" : "")}{(!e.Variable && e.AngleMatters ? " angled" : "")}{(e.Slat ? " slat" : "")} {e.Material}{(e.Xray.Length > 0 ? " x-ray " + e.Xray : "")}  [{e.Source}]");
+					string name = child.name.Substring(child.name.IndexOf('|') + 1);
+					if (child.name.StartsWith(VanillaEdits.ReshapeKind + "|"))
+						shapes[name] = (child.GetComponent<MeshFilter>().sharedMesh, bone);
+					if (volumes != null && child.name.StartsWith(VanillaEdits.VolumeKind + "|"))
+						volumes[name] = (child.GetComponent<MeshFilter>().sharedMesh, bone);
 				}
 			}
-			Object.Destroy(inst);
+			string changed = edits == null
+				? "no vanilla_edits in the bundle"
+				: VanillaEditsApply.Apply(vehicle.transform, edits, shapes, problems);
+			int count = Apply(vehicle, prefab, values, tag, problems, table, groups);
+			return (count, changed);
+		}
+
+		internal static int EmptyVolumes(Vehicle vehicle, GameObject prefab, List<string> problems)
+		{
+			var flammables = vehicle.GetComponent<FlammablesManager>();
+			if (flammables == null)
+			{
+				problems.Add("no compartment manager");
+				return 0;
+			}
+			int count = 0;
+			foreach (var (group, path, token) in GroupsFor(vehicle.transform))
+			{
+				var source = prefab.transform.Find(group);
+				var bone = vehicle.transform.Find(path);
+				var parent = ArmorRoot(vehicle, token);
+				if (source == null || bone == null || parent == null) continue;
+				foreach (Transform child in source)
+				{
+					if (!child.name.StartsWith(VanillaEdits.VolumeKind + "|")) continue;
+					string name = child.name.Substring(child.name.IndexOf('|') + 1);
+					if (flammables.Compartments.Any(e => e != null && e.name == name))
+						continue;
+					var volumeObject = new GameObject(name);
+					volumeObject.SetActive(false);
+					var template = flammables.Compartments
+						.SelectMany(t => t.Volumes)
+						.First(v => v != null);
+					volumeObject.layer = template.gameObject.layer;
+					volumeObject.tag = template.gameObject.tag;
+					Followers.PlaceOnBone(volumeObject.transform, bone, parent);
+					var collider = volumeObject.AddComponent<MeshCollider>();
+					collider.sharedMesh = child.GetComponent<MeshFilter>().sharedMesh;
+					collider.convex = false;
+					var compartment = volumeObject.AddComponent<Compartment>();
+					volumeObject.AddComponent<ImportedCompartment>();
+					compartment.Name = name;
+					compartment.Parent = null;
+					compartment.Volumes = new Collider[] { collider };
+					compartment.TotalVolume = 1f;
+					compartment.Exits = new List<CompartmentExit>();
+					compartment.Detachables = new List<DetachableParent>();
+					compartment.Clusters = new List<FlammablesCluster>();
+					compartment.UnsecuredFiresHere = false;
+					volumeObject.SetActive(true);
+					compartment.RegisterFlammablesManager(flammables);
+					flammables.Compartments = flammables.Compartments.Concat(new[] { compartment }).ToArray();
+					count++;
+				}
+			}
+			return count;
+		}
+
+		internal static int Apply(Vehicle vehicle, GameObject prefab, DmArmour values, string tag, List<string> problems, StringBuilder table =
+			null,
+			(string group, string bone, string colliders)[] groups = null)
+		{
+			if (prefab == null || values == null)
+			{
+				problems.Add("no damage-model pieces or values in the bundle");
+				return 0;
+			}
+			var root = vehicle.transform;
+			var instance = Object.Instantiate(prefab);
+			int count = 0;
+			try
+			{
+				foreach (var (group, bonePath, token) in groups ?? GroupsFor(root))
+				{
+					var groupRoot = instance.transform.Find(group);
+					if (groupRoot == null) continue;
+					var bone = root.Find(bonePath);
+					var target = ArmorRoot(vehicle, token);
+					if (bone == null || target == null)
+					{
+						problems.Add($"{group}: no rig bone / collider group, {groupRoot.childCount} piece(s) left out");
+						continue;
+					}
+					foreach (var piece in groupRoot.Cast<Transform>().ToList())
+					{
+						string[] fields = piece.name.Split('|');
+						if (fields.Length < 2 || !fields[0].StartsWith("dm_")) continue;
+						try
+						{
+							var entry = values[fields[1]];
+							if (entry == null)
+							{
+								problems.Add($"'{fields[1]}': no value, left out");
+								continue;
+							}
+							if (entry.Drawn)
+							{
+								piece.name = fields[1];
+								Xray(piece.gameObject, entry, tag);
+								Followers.PlaceOnBone(piece, bone, target);
+								continue;
+							}
+							var codex = Codex(entry, tag);
+							if (codex == null)
+							{
+								problems.Add($"'{fields[1]}': unknown material '{entry.Material}', left out");
+								continue;
+							}
+							if (entry.Variable ? VariableType == null : UMaterial == null)
+							{
+								string armourClass = entry.Variable ? "VariableArmor" : "UniformArmor";
+								problems.Add($"'{fields[1]}': GHPC {armourClass}._armorType not found, left out");
+								continue;
+							}
+							piece.name = fields[1];
+							Setup(piece.gameObject, entry, codex, vehicle, tag);
+							Followers.PlaceOnBone(piece, bone, target);
+							count++;
+							table?.AppendLine($"  {group,-6} {fields[1],-30} {entry.Name,-42} {entry.Mode,-9} {(entry.Variable ? $"KE x{entry.Ke:0.000}/mm HEAT x{entry.Ce:0.000}/mm" : $"KE {entry.Ke,4:0} mm HEAT {entry.Ce,4:0} mm")}"
+								+ $"{(entry.Era ? $" (after {entry.KeAfter:0}/{entry.CeAfter:0})" : "")}{(!entry.Variable && entry.AngleMatters ? " angled" : "")}{(entry.Slat ? " slat" : "")} {entry.Material}{(entry.Xray.Length > 0 ? " x-ray " + entry.Xray : "")}  [{entry.Source}]");
+						}
+						catch (System.Exception exception)
+						{
+							problems.Add($"'{fields[1]}': failed, left out ({exception.GetType().Name}: {exception.Message})");
+						}
+					}
+				}
+			}
+			finally { Object.Destroy(instance); }
+			return count;
 		}
 
 		static readonly AccessTools.FieldRef<UniformArmor, string> UName = Reflect.FieldRefAccess<UniformArmor, string>("_name");
-		static readonly AccessTools.FieldRef<UniformArmor, ArmorCodexScriptable> UMaterial = Reflect.FieldRefAccess<UniformArmor, ArmorCodexScriptable>("_armorType");
+		static readonly AccessTools.FieldRef<UniformArmor, ArmorCodexScriptable> UMaterial =
+			Reflect.FieldRefAccess<UniformArmor, ArmorCodexScriptable>("_armorType");
 		static readonly AccessTools.FieldRef<UniformArmor, bool> UIsEra = Reflect.FieldRefAccess<UniformArmor, bool>("_isEra");
 		static readonly AccessTools.FieldRef<UniformArmor, bool> UIsSlat = Reflect.FieldRefAccess<UniformArmor, bool>("_isSlatArmor");
 		static readonly AccessTools.FieldRef<UniformArmor, bool> UNoDecals = Reflect.FieldRefAccess<UniformArmor, bool>("_noImpactDecals");
+		static readonly System.Reflection.FieldInfo VariableType = Reflect.Field(typeof(VariableArmor), "_armorType");
 
 		static void Setup(GameObject go, DmArmour.Entry e, ArmorCodexScriptable codex, Vehicle vehicle, string tag)
 		{
@@ -108,23 +232,23 @@ namespace T80UM2.Common
 			go.tag = "Penetrable";
 			var col = go.AddComponent<MeshCollider>();
 			col.sharedMesh = go.GetComponent<MeshFilter>().sharedMesh;
-			// VariableArmor measures entry to exit through its own mesh, it has to stay non-convex.
+			// VariableArmor measures entry to exit through its own mesh, so it has to stay non-convex.
 			col.convex = e.Convex;
 			if (e.Variable)
 			{
-				var va = go.AddComponent<VariableArmor>();
-				va.SetName(e.Name);
-				Reflect.Field(typeof(VariableArmor), "_armorType").SetValue(va, codex);
-				va.Unit = vehicle;
+				var armor = go.AddComponent<VariableArmor>();
+				armor.SetName(e.Name);
+				VariableType.SetValue(armor, codex);
+				armor.Unit = vehicle;
 			}
 			else
 			{
 				var armor = go.AddComponent<UniformArmor>();
-				UName(armor) = e.Name;
+				if (UName != null) UName(armor) = e.Name;
 				UMaterial(armor) = codex;
-				UIsEra(armor) = e.Era;
-				UIsSlat(armor) = e.Slat;
-				UNoDecals(armor) = e.Era;
+				if (UIsEra != null) UIsEra(armor) = e.Era;
+				if (UIsSlat != null) UIsSlat(armor) = e.Slat;
+				if (UNoDecals != null) UNoDecals(armor) = e.Era;
 				armor.ThicknessListed = UniformArmor.ThicknessMode.RHAE;
 				armor.PrimarySabotRha = e.Ke;
 				armor.PrimaryHeatRha = e.Ce;
@@ -143,8 +267,8 @@ namespace T80UM2.Common
 		{
 			if (e.Xray.Length == 0)
 			{
-				var r = go.GetComponent<Renderer>();
-				if (r != null) r.enabled = false;
+				var renderer = go.GetComponent<Renderer>();
+				if (renderer != null) renderer.enabled = false;
 				return;
 			}
 			var aar = go.AddComponent<AarVisual>();
@@ -160,62 +284,91 @@ namespace T80UM2.Common
 
 		internal static Material XrayMaterial(string spec, string tag)
 		{
-			if (_xray.TryGetValue(spec, out var m) && m != null) return m;
+			if (_xray.TryGetValue(spec, out var material) && material != null) return material;
 			// No handle on GHPC's x-ray material, but the T-72M1's cheek array carries it, so any loaded AarVisual will do.
-			var from = Resources.FindObjectsOfTypeAll<AarVisual>().FirstOrDefault(v => v.AarMaterial != null && v.AarMaterial.name == XrayTemplate);
-			m = from != null ? from.AarMaterial : null;
-			if (m == null) return null;
+			var from = Resources.FindObjectsOfTypeAll<AarVisual>()
+				.FirstOrDefault(v => v.AarMaterial != null && v.AarMaterial.name == XrayTemplate);
+			material = from != null ? from.AarMaterial : null;
+			if (material == null) return null;
 			if (spec != "template")
 			{
-				var c = spec.Split(',').Select(s => float.Parse(s.Trim(), CultureInfo.InvariantCulture)).ToArray();
-				if (c.Length < 3) return null;
-				m = new Material(m) { name = $"{tag} see-through {spec}", color = new Color(c[0], c[1], c[2], c.Length > 3 ? c[3] : 0.5f), hideFlags = HideFlags.DontUnloadUnusedAsset };
+				var channels = spec.Split(',').Select(t => float.Parse(t.Trim(), CultureInfo.InvariantCulture)).ToArray();
+				if (channels.Length < 3) return null;
+				material = new Material(material)
+				{
+					name = $"{tag} see-through {spec}",
+					color = new Color(channels[0], channels[1], channels[2], channels.Length > 3 ? channels[3] : 0.5f),
+					hideFlags = HideFlags.DontUnloadUnusedAsset
+				};
 			}
-			return _xray[spec] = m;
+			return _xray[spec] = material;
 		}
 
 		internal static readonly string[] Materials = DmArmour.Materials;
 		static readonly Dictionary<string, ArmorCodexScriptable> _codex = new Dictionary<string, ArmorCodexScriptable>();
 
-		// Our own codex assets. The vanilla ones are shared by every tank in the game, never edit them.
+		// My own codex assets. The vanilla ones are shared by every tank in the game.
 		static ArmorCodexScriptable Codex(DmArmour.Entry e, string tag)
 		{
 			if (!Materials.Contains(e.Material)) return null;
-			string key = e.Variable ? $"{e.Material}|{e.Ke.ToString("R", CultureInfo.InvariantCulture)}|{e.Ce.ToString("R", CultureInfo.InvariantCulture)}" : e.Material;
-			if (_codex.TryGetValue(key, out var c) && c != null) return c;
-			float ke = e.Variable ? e.Ke : 1f, ce = e.Variable ? e.Ce : 1f;
-			var t = new ArmorType
+			string key = e.Variable
+				? $"{e.Material}|{e.Ke.ToString("R", CultureInfo.InvariantCulture)}|{e.Ce.ToString("R", CultureInfo.InvariantCulture)}"
+				: e.Material;
+			if (_codex.TryGetValue(key, out var cached) && cached != null) return cached;
+			float kineticMultiplier = e.Variable ? e.Ke : 1f, chemicalMultiplier = e.Variable ? e.Ce : 1f;
+			var armorType = new ArmorType
 			{
-				Name = e.Material.Replace('_', ' '), ThicknessSource = ArmorType.RhaSource.Multipliers, RhaeMultiplierKe = ke, RhaeMultiplierCe = ce,
-				CanRicochet = false, NormalizesHits = true, CanShatterLongRods = false, HarderIsBetter = false,
-				SpallAngleMultiplier = 1f, SpallPowerMultiplier = 1f, CrushThicknessModifier = 1f,
+				Name = e.Material.Replace('_', ' '),
+				ThicknessSource = ArmorType.RhaSource.Multipliers,
+				RhaeMultiplierKe = kineticMultiplier,
+				RhaeMultiplierCe = chemicalMultiplier,
+				CanRicochet = false,
+				NormalizesHits = true,
+				CanShatterLongRods = false,
+				HarderIsBetter = false,
+				SpallAngleMultiplier = 1f,
+				SpallPowerMultiplier = 1f,
+				CrushThicknessModifier = 1f,
 			};
 			switch (e.Material)
 			{
 				case "armour_steel":
 				case "mild_steel":
 					bool armour = e.Material == "armour_steel";
-					t.Name = armour ? "armor steel" : "mild steel";
-					t.BHN = armour ? 313f : 129f;
-					if (!e.Variable) t.ThicknessSource = ArmorType.RhaSource.BHN;
-					t.CanShatterLongRods = armour; t.CanRicochet = true;
+					armorType.Name = armour ? "armor steel" : "mild steel";
+					armorType.BHN = armour ? 313f : 129f;
+					if (!e.Variable) armorType.ThicknessSource = ArmorType.RhaSource.BHN;
+					armorType.CanShatterLongRods = armour;
+					armorType.CanRicochet = true;
 					break;
 				case "plain": break;
 				case "composite":
-					t.CanRicochet = true; t.CanShatterLongRods = true; t.SpallAngleMultiplier = 0.5f; t.SpallPowerMultiplier = 0.5f;
+					armorType.CanRicochet = true;
+					armorType.CanShatterLongRods = true;
+					armorType.SpallAngleMultiplier = 0.5f;
+					armorType.SpallPowerMultiplier = 0.5f;
 					break;
 				case "filling":
 				case "filling_steel":
 					bool steel = e.Material == "filling_steel";
-					t.NormalizesHits = false; t.CanShatterLongRods = steel; t.BHN = steel ? 450f : 100f; t.SpallAngleMultiplier = 0.5f; t.SpallPowerMultiplier = 0.5f;
+					armorType.NormalizesHits = false;
+					armorType.CanShatterLongRods = steel;
+					armorType.BHN = steel ? 450f : 100f;
+					armorType.SpallAngleMultiplier = 0.5f;
+					armorType.SpallPowerMultiplier = 0.5f;
 					break;
 				case "liner":
-					t.NormalizesHits = false; t.HarderIsBetter = true; t.BHN = 2f; t.SpallAngleMultiplier = 0.33f; t.SpallPowerMultiplier = 0.9f; t.CrushThicknessModifier = 0.05f;
+					armorType.NormalizesHits = false;
+					armorType.HarderIsBetter = true;
+					armorType.BHN = 2f;
+					armorType.SpallAngleMultiplier = 0.33f;
+					armorType.SpallPowerMultiplier = 0.9f;
+					armorType.CrushThicknessModifier = 0.05f;
 					break;
 			}
 			var codex = ScriptableObject.CreateInstance<ArmorCodexScriptable>();
-			codex.name = $"{tag} {t.Name}{(e.Variable ? $" x{ke:0.###}/{ce:0.###} per mm" : "")}";
-			codex.ArmorType = t;
+			codex.name = $"{tag} {armorType.Name}{(e.Variable ? $" x{kineticMultiplier:0.###}/{chemicalMultiplier:0.###} per mm" : "")}";
+			codex.ArmorType = armorType;
 			Object.DontDestroyOnLoad(codex);
 			return _codex[key] = codex;
 		}
@@ -223,11 +376,11 @@ namespace T80UM2.Common
 		internal static Transform ArmorRoot(Vehicle vehicle, string token)
 		{
 			Transform follower = vehicle.GetComponentsInChildren<LateFollowTarget>(true)
-				.SelectMany(t => t.LateFollowers)
+				.SelectMany(f => f.LateFollowers)
 				.Where(f => f != null && f.name.Contains(token))
 				.Select(f => f.transform)
 				.FirstOrDefault()
-				?? vehicle.transform.Cast<Transform>().FirstOrDefault(t => t.name.Contains(token));
+				?? vehicle.transform.Cast<Transform>().FirstOrDefault(c => c.name.Contains(token));
 			if (follower == null) return null;
 			return follower.Find("ARMOR") ?? follower;
 		}

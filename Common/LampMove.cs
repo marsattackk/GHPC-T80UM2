@@ -10,55 +10,103 @@ namespace T80UM2.Common
 		{
 			public string Light;
 			public Vector3 Place;
+			public string Note = "";
 		}
 
 		internal const float Reach = 0.30f;
 
-		internal static void Apply(Transform root, IEnumerable<Lamp> lamps, IEnumerable<string> glows)
+		internal static List<string> Apply(Transform root, IEnumerable<Lamp> lamps, IEnumerable<string> glows, string tag)
 		{
+			var log = new List<string>();
+			string P(Vector3 worldPoint)
+			{
+				var localPoint = root.InverseTransformPoint(worldPoint);
+				return $"({localPoint.x:0.000}, {localPoint.y:0.000}, {localPoint.z:0.000})";
+			}
 			var lights = root.GetComponentsInChildren<Light>(true);
 			var moves = new List<(Vector3 from, Vector3 shift)>();
-			foreach (var l in lamps)
+			foreach (var lamp in lamps)
 			{
-				var light = lights.FirstOrDefault(x => x.name == l.Light);
-				if (light == null) continue;
+				var light = lights.FirstOrDefault(c => c.name == lamp.Light);
+				if (light == null)
+				{
+					log.Add($"{tag} lamp '{lamp.Light}': NOT FOUND");
+					continue;
+				}
 				var from = light.transform.position;
-				var to = root.TransformPoint(l.Place);
-				light.transform.position = to;
-				moves.Add((from, to - from));
+				var target = root.TransformPoint(lamp.Place);
+				light.transform.position = target;
+				moves.Add((from, target - from));
+				log.Add($"{tag} lamp '{lamp.Light}': {P(from)} -> {P(target)} ({(target - from).magnitude * 100f:0.0} cm){(lamp.Note.Length > 0 ? ", " + lamp.Note : "")}.");
 			}
 			var names = new HashSet<string>(glows ?? Enumerable.Empty<string>());
-			foreach (var mf in root.GetComponentsInChildren<MeshFilter>(true).Where(m => names.Contains(m.name)))
+			foreach (var meshFilter in root.GetComponentsInChildren<MeshFilter>(true).Where(c => names.Contains(c.name)))
 			{
-				if (mf.sharedMesh == null || !mf.sharedMesh.isReadable) continue;
-				// The instance, not sharedMesh: the T-80B's glow meshes are shared by every T-80B in the scene.
-				var mesh = mf.mesh;
-				var v = mesh.vertices;
-				var clusters = Clusters(mesh);
-				foreach (var c in clusters)
+				if (meshFilter.sharedMesh == null || !meshFilter.sharedMesh.isReadable)
 				{
-					var centre = mf.transform.TransformPoint(c.Aggregate(Vector3.zero, (a, i) => a + v[i]) / c.Count);
-					var best = moves.Where(m => (m.from - centre).magnitude <= Reach).OrderBy(m => (m.from - centre).sqrMagnitude).ToList();
-					if (best.Count == 0) continue;
-					var local = mf.transform.InverseTransformVector(best[0].shift);
-					foreach (int i in c) v[i] += local;
+					log.Add($"{tag} lamp glow '{meshFilter.name}': mesh {(meshFilter.sharedMesh == null ? "missing" : "not readable")}, left in place.");
+					continue;
 				}
-				mesh.vertices = v;
+				// The instance, not sharedMesh: the T-80B's glow meshes are shared by every T-80B in the scene.
+				var mesh = meshFilter.mesh;
+				var vertices = mesh.vertices;
+				var clusters = Clusters(mesh);
+				int moved = 0;
+				var parts = new List<string>();
+				foreach (var cluster in clusters)
+				{
+					var centre = meshFilter.transform.TransformPoint(cluster.Aggregate(
+						Vector3.zero,
+						(s, i) => s + vertices[i]) / cluster.Count);
+					var best = moves
+						.Where(m => (m.from - centre).magnitude <= Reach)
+						.OrderBy(m => (m.from - centre).sqrMagnitude)
+						.ToList();
+					if (best.Count == 0)
+					{
+						parts.Add($"{P(centre)} stays");
+						continue;
+					}
+					var local = meshFilter.transform.InverseTransformVector(best[0].shift);
+					foreach (int i in cluster) vertices[i] += local;
+					moved++;
+					parts.Add($"{P(centre)} -> {P(centre + best[0].shift)}");
+				}
+				mesh.vertices = vertices;
 				mesh.RecalculateBounds();
+				log.Add($"{tag} lamp glow '{meshFilter.name}': {moved} of {clusters.Count} quads moved with their lamps ({string.Join("; ", parts)}).");
 			}
+			return log;
 		}
 
 		static List<List<int>> Clusters(Mesh mesh)
 		{
-			var v = mesh.vertices;
-			var parent = Enumerable.Range(0, v.Length).ToArray();
-			int Root(int i) { while (parent[i] != i) i = parent[i] = parent[parent[i]]; return i; }
-			void Unite(int a, int b) { a = Root(a); b = Root(b); if (a != b) parent[a] = b; }
-			var t = mesh.triangles;
-			for (int k = 0; k + 2 < t.Length; k += 3) { Unite(t[k], t[k + 1]); Unite(t[k], t[k + 2]); }
+			var vertices = mesh.vertices;
+			var parent = Enumerable.Range(0, vertices.Length).ToArray();
+			int Root(int i)
+			{
+				while (parent[i] != i) i = parent[i] = parent[parent[i]];
+				return i;
+			}
+			void Unite(int first, int second)
+			{
+				first = Root(first);
+				second = Root(second);
+				if (first != second) parent[first] = second;
+			}
+			var triangles = mesh.triangles;
+			for (int k = 0; k + 2 < triangles.Length; k += 3)
+			{
+				Unite(triangles[k], triangles[k + 1]);
+				Unite(triangles[k], triangles[k + 2]);
+			}
 			var byPos = new Dictionary<Vector3, int>();
-			for (int i = 0; i < v.Length; i++) { if (byPos.TryGetValue(v[i], out var j)) Unite(i, j); else byPos[v[i]] = i; }
-			return Enumerable.Range(0, v.Length).GroupBy(Root).Select(g => g.ToList()).ToList();
+			for (int i = 0; i < vertices.Length; i++)
+			{
+				if (byPos.TryGetValue(vertices[i], out var j)) Unite(i, j);
+				else byPos[vertices[i]] = i;
+			}
+			return Enumerable.Range(0, vertices.Length).GroupBy(Root).Select(c => c.ToList()).ToList();
 		}
 	}
 }

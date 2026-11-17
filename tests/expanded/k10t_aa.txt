@@ -1,0 +1,22 @@
+K10-T (T-80UM2)|16.0000|first|True
+G|Boresight|Boresight||0.0000|0.0000|0.0000
+ L|0.0000|0.0000|0.0000|251.3274|0.2618|painted|NightIllumination
+ L|0.0000|0.0000|90.0000|251.3274|0.2618|painted|NightIllumination
+ L|-10.4720|0.0000|90.0000|3.1416|0.2618|painted|NightIllumination
+ L|0.0000|-10.4720|0.0000|3.1416|0.2618|painted|NightIllumination
+ L|-20.9440|0.0000|90.0000|6.2832|0.2618|painted|NightIllumination
+ L|0.0000|-20.9440|0.0000|6.2832|0.2618|painted|NightIllumination
+ L|-31.4159|0.0000|90.0000|3.1416|0.2618|painted|NightIllumination
+ L|0.0000|-31.4159|0.0000|3.1416|0.2618|painted|NightIllumination
+ L|-41.8879|0.0000|90.0000|6.2832|0.2618|painted|NightIllumination
+ L|0.0000|-41.8879|0.0000|6.2832|0.2618|painted|NightIllumination
+ L|10.4720|0.0000|90.0000|3.1416|0.2618|painted|NightIllumination
+ L|0.0000|10.4720|0.0000|3.1416|0.2618|painted|NightIllumination
+ L|20.9440|0.0000|90.0000|6.2832|0.2618|painted|NightIllumination
+ L|0.0000|20.9440|0.0000|6.2832|0.2618|painted|NightIllumination
+ L|31.4159|0.0000|90.0000|3.1416|0.2618|painted|NightIllumination
+ L|0.0000|31.4159|0.0000|3.1416|0.2618|painted|NightIllumination
+ L|41.8879|0.0000|90.0000|6.2832|0.2618|painted|NightIllumination
+ L|0.0000|41.8879|0.0000|6.2832|0.2618|painted|NightIllumination
+ C|0.0000|0.0000|83.7758|0.2618|64|painted|NightIllumination
+ C|0.0000|0.0000|125.6637|0.2618|64|painted|NightIllumination

@@ -1,0 +1,184 @@
+turret_03_back_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+body_bottom_dm	nominal	20	20	0	0	1	armour_steel		hull floor		0
+body_side_dm	nominal	80	80	0	0	1	armour_steel		hull side		0
+body_top_dm	nominal	30	30	0	0	1	armour_steel		hull roof		0
+turret_01_back_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+superstructure_side_dm	nominal	80	80	0	0	1	armour_steel		hull side (engine)		0
+composite_armor_turret_01_dm	geometry	0.9778	1.947	0	0	0	composite		cheek filling (cellular castings)		0
+superstructure_front_dm	geometry	0.9823	1.1416	0	0	0	armour_steel		glacis outer plate		0
+turret_05_top_dm	nominal	20	20	0	0	1	armour_steel		engine deck (front)		0
+turret_04_front_dm	geometry	0.9823	1.1416	0	0	0	armour_steel		glacis steel layer		0
+turret_03_front_dm	geometry	0.3733	0.9133	0	0	0	filling	0.85,0.75,0.20,0.35	glacis glass-textolite layer		0
+turret_02_front_dm	geometry	0.9823	1.1416	0	0	0	armour_steel		glacis steel layer		0
+turret_01_top_dm	drawn	0	0	0	0	0		0.05,0.55,0.10,0.5	plate behind the filling (BTK-1 80 mm)		0
+turret_01_front_dm	geometry	0.3733	0.9133	0	0	0	filling	0.85,0.75,0.20,0.35	glacis glass-textolite layer		0
+superstructure_back_dm	nominal	80	80	0	0	1	armour_steel		hull rear plate		0
+turret_06_bottom_dm	geometry	1	1	0	0	0	armour_steel		glacis ERA frame		0
+turret_08_top_dm	geometry	0.95	0.95	0	0	0	armour_steel		turret roof		0
+body_back_dm	nominal	5	5	0	0	1	armour_steel		engine bulkhead		0
+superstructure_top_dm	nominal	20	20	0	0	1	armour_steel		engine deck		0
+ex_armor_turret_05_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+turret_01_side_dm	geometry	1	1	0	0	0	armour_steel		turret ring guard		0
+ex_armor_body_09_dm	nominal	20	20	0	0	0	armour_steel		dozer blade		0
+turret_11_top_dm	geometry	1	1	0	0	0	armour_steel		engine deck strip		0
+ex_armor_body_02_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_armor_body_l_10_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_armor_body_r_10_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_armor_body_01_dm	nominal	20	20	0	0	1	armour_steel		APU bunker		0
+turret_10_bottom_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+ex_armor_body_l_11_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_armor_body_r_11_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_armor_body_r_01_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_l_01_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+turret_10_top_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+turret_06_front_dm	nominal	25	25	0	0	1	armour_steel		Drozd computer housing		0
+turret_top_dm	geometry	1	1	0	0	0	armour_steel		gun cradle		0
+aps_sensor_02_dm	nominal	25	25	0	0	1	armour_steel		Drozd radar housing, left		0
+aps_sensor_01_dm	nominal	25	25	0	0	1	armour_steel		Drozd radar housing, right		0
+turret_03_bottom_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+turret_04_back_dm	geometry	1	1	0	0	0	armour_steel		exhaust louvre box		0
+ex_era_turret_10_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+turret_02_top_dm	geometry	1	1	0	0	0	armour_steel		plate behind the glacis top		0
+ex_armor_body_r_09_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_armor_body_l_09_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_armor_body_l_02_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_r_04_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_l_05_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_r_03_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_r_05_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_r_02_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+turret_04_bottom_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+ex_armor_body_l_04_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_l_03_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+turret_10_side_dm	geometry	1	1	0	0	0	armour_steel		exhaust louvre box		0
+ex_era_hull_13_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_16_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_15_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_12_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+turret_07_bottom_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_era_hull_11_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_14_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_12_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_11_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+turret_09_top_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+turret_01_bottom_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+aps_launcher_02_dm	nominal	25	25	0	0	1	armour_steel		Drozd launcher block housing, left outer		0
+aps_launcher_01_dm	nominal	25	25	0	0	1	armour_steel		Drozd launcher block housing, right outer		0
+ex_armor_body_r_07_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_l_07_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_era_turret_13_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+turret_05_front_dm	geometry	1	1	0	0	0	armour_steel		driver's station block		0
+gun_mask_dm	geometry	0.95	0.95	0	0	0	armour_steel		gun mantlet		0
+ex_armor_body_l_06_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_r_06_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+turret_09_side_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+turret_02_bottom_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+aps_launcher_04_dm	nominal	25	25	0	0	1	armour_steel		Drozd launcher block housing, left inner		0
+aps_launcher_03_dm	nominal	25	25	0	0	1	armour_steel		Drozd launcher block housing, right inner		0
+ex_era_hull_07_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_09_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_decor_13_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_decor_10_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_body_03_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_decor_09_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+turret_04_top_dm	geometry	1	1	0	0	0	armour_steel		block at the glacis top (driver's periscopes)		0
+ex_armor_turret_08_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_armor_body_04_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+turret_09_back_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+ex_armor_turret_04_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_decor_08_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric screen		0
+ex_armor_turret_06_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+ex_era_hull_10_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_08_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_03_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_01_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_07_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_04_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_08_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_02_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+turret_05_bottom_dm	nominal	3	3	0	0	0	mild_steel		stowage box / fender sheet		0
+turret_08_back_dm	geometry	1	1	0	0	0	armour_steel		gunner's sight head armour		0
+ex_era_turret_05_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_09_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_06_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_05_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_04_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_03_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_02_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_01_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_06_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+turret_10_back_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+turret_09_front_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+turret_06_top_dm	geometry	0.95	0.95	0	0	0	armour_steel		cast turret		0
+L_cellrow1_block01a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block01b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block02a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block02b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block03a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block03b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block04a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block04b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block05a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block05b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block06a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block06b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block07a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block07b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block08a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_block08b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow1_cells	drawn	0	0	0	0	0		0.60,1.00,0.15,0.40	polymer-filled cells (x-ray only)		0
+L_cellrow1_plate	drawn	0	0	0	0	0		0.05,0.55,0.10,0.5	steel plate between block rows, 20 mm (x-ray only)		0
+L_cellrow2_block01a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block01b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block02a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block02b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block03a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block03b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block04a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block04b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block05a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block05b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block06a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block06b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block07a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block07b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block08a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_block08b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+L_cellrow2_cells	drawn	0	0	0	0	0		0.60,1.00,0.15,0.40	polymer-filled cells (x-ray only)		0
+R_cellrow1_block01a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block01b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block02a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block02b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block03a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block03b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block04a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block04b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block05a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block05b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block06a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block06b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block07a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block07b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_block08a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow1_cells	drawn	0	0	0	0	0		0.60,1.00,0.15,0.40	polymer-filled cells (x-ray only)		0
+R_cellrow1_plate	drawn	0	0	0	0	0		0.05,0.55,0.10,0.5	steel plate between block rows, 20 mm (x-ray only)		0
+R_cellrow2_block01a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block01b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block02a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block02b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block03a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block03b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block04a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block04b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block05a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block05b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block06a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block06b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block07a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block07b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block08a	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_block08b	drawn	0	0	0	0	0		0.00,0.62,0.85,0.30	cast cheek block (x-ray only)		0
+R_cellrow2_cells	drawn	0	0	0	0	0		0.60,1.00,0.15,0.40	polymer-filled cells (x-ray only)		0
+superstructure_front_lower	geometry	1.1581	1.1581	0	0	0	armour_steel		lower front plate		0
+liner_turret	geometry	0.1	0.1	0	0	0	liner		anti-radiation lining		0
+liner_hull	geometry	0.1	0.1	0	0	0	liner		anti-radiation lining		0

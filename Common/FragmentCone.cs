@@ -9,27 +9,30 @@ using UnityEngine;
 
 namespace T80UM2.Common
 {
+	// Spall elements thrown in a cone. LiveRound.Init resets RhaPenetrationOverride to 0, so an
+	// override set before Init only reaches the ShotInfo: penAfterInit sets it again after Init.
 	internal static class FragmentCone
 	{
 		internal static AmmoType Type(string name, float mass, float area, float coeff, float caliber, float pen, float penSpeed)
 		{
-			var a = new AmmoType();
-			foreach (var fi in typeof(AmmoType).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-				if (!fi.IsLiteral && !fi.IsInitOnly) fi.SetValue(a, fi.GetValue(LiveRound.SpallAmmoType));
-			a.Name = name;
-			a.IsSpallType = true;
-			a.Mass = mass;
-			a.SectionalArea = area;
-			a.Coeff = coeff;
-			a.Caliber = caliber;
-			a.RhaPenetration = pen;
-			a.MuzzleVelocity = penSpeed;
-			a.VisualType = LiveRoundMarshaller.LiveRoundVisualType.Invisible;
-			return a;
+			var ammo = new AmmoType();
+			foreach (var field in typeof(AmmoType).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+				if (!field.IsLiteral && !field.IsInitOnly) field.SetValue(ammo, field.GetValue(LiveRound.SpallAmmoType));
+			ammo.Name = name;
+			ammo.IsSpallType = true;
+			ammo.Mass = mass;
+			ammo.SectionalArea = area;
+			ammo.Coeff = coeff;
+			ammo.Caliber = caliber;
+			ammo.RhaPenetration = pen;
+			ammo.MuzzleVelocity = penSpeed;
+			ammo.VisualType = LiveRoundMarshaller.LiveRoundVisualType.Invisible;
+			return ammo;
 		}
 
 		internal static int Spawn(AmmoType info, Vector3 at, Vector3 fwd, float halfAngle, int count, float speed, float pen,
-			Unit shooter, bool npc, LiveRound parent, string name, Func<float> random, bool penAfterInit, Vector3 fallbackRight, Action<LiveRound> spawned = null)
+			Unit shooter, bool npc, LiveRound parent, string name, Func<float> random, bool penAfterInit, Vector3 fallbackRight, Action<LiveRound> spawned =
+				null)
 		{
 			var marshaller = LiveRoundMarshaller.Instance;
 			if (marshaller == null || count <= 0) return 0;
@@ -40,22 +43,22 @@ namespace T80UM2.Common
 			for (int i = 0; i < count; i++)
 			{
 				// sqrt spreads them evenly over the cone's cross-section, not bunched in the middle
-				float rr = tan * Mathf.Sqrt(random()), phi = 2f * Mathf.PI * random();
-				var dir = (fwd + rr * (Mathf.Cos(phi) * right + Mathf.Sin(phi) * up)).normalized;
-				var e = marshaller.GetRoundOfVisualType(LiveRoundMarshaller.LiveRoundVisualType.Invisible);
-				e.Info = info;
-				e.RhaPenetrationOverride = pen;
-				e.CurrentSpeed = speed;
-				e.MaxSpeed = speed;
-				e.NpcRound = npc;
-				e.IsSpall = true;
-				e.Shooter = shooter;
-				e.transform.position = at;
-				e.transform.forward = dir;
-				e.Init(parent);
-				if (penAfterInit) e.RhaPenetrationOverride = pen;
-				e.gameObject.name = $"{name} {e.ID}";
-				spawned?.Invoke(e);
+				float radius = tan * Mathf.Sqrt(random()), phi = 2f * Mathf.PI * random();
+				var dir = (fwd + radius * (Mathf.Cos(phi) * right + Mathf.Sin(phi) * up)).normalized;
+				var round = marshaller.GetRoundOfVisualType(LiveRoundMarshaller.LiveRoundVisualType.Invisible);
+				round.Info = info;
+				round.RhaPenetrationOverride = pen;
+				round.CurrentSpeed = speed;
+				round.MaxSpeed = speed;
+				round.NpcRound = npc;
+				round.IsSpall = true;
+				round.Shooter = shooter;
+				round.transform.position = at;
+				round.transform.forward = dir;
+				round.Init(parent);
+				if (penAfterInit) round.RhaPenetrationOverride = pen;
+				round.gameObject.name = $"{name} {round.ID}";
+				spawned?.Invoke(round);
 			}
 			return count;
 		}

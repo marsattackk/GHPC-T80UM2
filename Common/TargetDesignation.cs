@@ -12,12 +12,14 @@ namespace T80UM2.Common
 {
 	internal static class TargetDesignation
 	{
-		internal static Link Register(Vehicle vehicle, FireControlSystem main, CameraSlot[] from)
+		internal static Link Register(Vehicle vehicle, FireControlSystem main, CameraSlot[] from, string tag)
 		{
 			if (vehicle == null || main == null || from == null) return null;
-			var l = vehicle.gameObject.GetComponent<Link>() ?? vehicle.gameObject.AddComponent<Link>();
-			l.Main = main; l.From = from.Where(s => s != null).ToArray();
-			return l;
+			var link = vehicle.gameObject.GetComponent<Link>() ?? vehicle.gameObject.AddComponent<Link>();
+			link.Main = main;
+			link.From = from.Where(s => s != null).ToArray();
+			link.Tag = tag;
+			return link;
 		}
 
 		internal static bool KeyHeld()
@@ -26,14 +28,19 @@ namespace T80UM2.Common
 			catch { return false; }
 		}
 
-		static bool IsPlayers(Vehicle v) => v != null && PlayerInput.Instance != null && (object)PlayerInput.Instance.CurrentPlayerUnit == v;
+		static bool IsPlayers(Vehicle v)
+			=> v != null && PlayerInput.Instance != null && (object)PlayerInput.Instance.CurrentPlayerUnit == v;
 
 		[DefaultExecutionOrder(-40)]
 		internal sealed class Link : MonoBehaviour
 		{
 			internal FireControlSystem Main;
 			internal CameraSlot[] From = new CameraSlot[0];
+			internal string Tag;
 			internal bool Held { get; private set; }
+
+			internal Vector3 Line => _line;
+			internal int Frames { get; private set; }
 
 			Vehicle _vehicle;
 
@@ -54,6 +61,7 @@ namespace T80UM2.Common
 				Held = held;
 				if (!held) return;
 				Main.SetAimVector(_line, true);
+				Frames++;
 			}
 		}
 
@@ -70,10 +78,14 @@ namespace T80UM2.Common
 					var input = PlayerInput.Instance;
 					if (input == null || (object)input.CurrentPlayerCrewBrain?.WeaponsModule != __instance) return true;
 					var unit = input.CurrentPlayerUnit as Vehicle;
-					var l = unit != null ? unit.GetComponent<Link>() : null;
-					return l == null || !l.InView;
+					var link = unit != null ? unit.GetComponent<Link>() : null;
+					return link == null || !link.InView;
 				}
-				catch (System.Exception e) { PatchGuard.Failed("Target designation (aim override)", e); return true; }
+				catch (System.Exception exception)
+				{
+					PatchGuard.Failed("Target designation (aim override)", exception);
+					return true;
+				}
 			}
 		}
 	}

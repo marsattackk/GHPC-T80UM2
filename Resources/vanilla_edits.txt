@@ -1,0 +1,47 @@
+off|60mm plate
+off|50mm texolite insert
+off|45mm plate
+off|16mm applique
+off|lower glacis
+off|side plate variable
+off|side plate variable002
+off|hull upper
+off|hull rear
+off|hull floor
+off|hatch
+off|peri armour
+off|plow
+off|plow attachments top
+off|plow attachments bottom
+off|tow hooks
+off|rib
+off|rib 1
+off|skirt
+off|skirt 1
+off|mud flap
+off|mud flap 1
+off|mud flap 2
+off|mud flap 3
+off|tinwork
+off|tinwork001
+off|ZIP box
+off|ZIP box001
+off|exhaust
+off|turret casting
+off|cheek inserts
+off|mantlet
+off|command mount
+off|gunner's hatch
+off|sight hood
+off|sight armour
+off|night sight armour
+off|Luna
+off|Firewall
+reshape|turret volume
+reshape|fighting compartment
+reshape|engine compartment
+reshape|fuel tank 1
+reshape|fuel tank001
+reshape|fuel tank
+reshape|fuel tank002
+reshape|fuel tank003

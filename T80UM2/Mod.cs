@@ -1,70 +1,109 @@
 using System.IO;
-using System.Linq;
-using GHPC.Vehicle;
 using MelonLoader;
 using MelonLoader.Utils;
 using T80UM2.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T80UM2.T80UM2Mod), "T-80UM2", "0.1.1", "marsattackk")]
+[assembly: MelonInfo(typeof(T80UM2.T80UM2Mod), "T-80UM2", "0.2.0", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
 
 namespace T80UM2
 {
-	public class T80UM2Mod : MelonMod
+	// Loads the bundle, registers the unit on the T80B prefab and hangs the War Thunder model's HULL / TURRET / GUN on the base
+	// rig's bones (the base's visuals off, paint, real axes). Armour, rounds and the Drozd go on with the turret at rest, before
+	// the axes move; the НСВТ, the sights and the module wiring follow (Conversion.Convert).
+	public partial class T80UM2Mod : MelonMod
 	{
 		internal const string UnitKey = "T80UM2";
+
+		internal static GameObject Visual;   // the War Thunder model, the bundle's T80UM2_visual prefab
+		internal static VanillaEdits Edits;   // the T-80B's pieces switched off or changed (Resources\vanilla_edits.txt)
+		internal static MaterialRoles Roles;   // material roles: the vanilla glass at spawn
+		internal static RigMap Rig;   // moving parts: hatches, the turret and gun axes
+		internal static Vector3[] SmokePoints;   // the smoke tubes' launch points (from the bundle)
+
 		internal const string FriendlyName = "T-80UM2";
-		const string BaseUnit = "T80B";
+		const string BaseUnit = "T80B";   // registry key of the vanilla prefab "T80B" (crew, interior, damage model, running gear)
 		const string ArmyFrom = "T80B";
+		internal const int CoaxRounds = 1250;   // the ПКТ coax's load: 5 belts of 250 (Firepower.PktBelt)
+		internal const string NumberPosition = "rear lamp";   // the tactical numbers sit on the turret-rear march lamp
 
-		static readonly (string group, string path)[] Bones = { ("HULL", "T80B_rig/HULL"), ("TURRET", "T80B_rig/HULL/TURRET"), ("GUN", "T80B_rig/HULL/TURRET/gun"),
-			("MANTLET_COVER", "T80B_rig/HULL/TURRET/gun") };
-		static readonly string[] Painted = { "t80um2_era_kontakt_5_t_80u", "t80um2_t_80u_gun", "t80um2_t_80u_turret", "t80um2_mg_mount_nsvt_t_80u", "t80um2_t_80u_body", "t80um2_t_80um2_turret" };
-
-		internal static GameObject Visual, Armor;
-		internal static RigMap Rig;
-		internal static MaterialRoles Roles;
-		internal static Vector3[] SmokePoints;
 		internal static MelonPreferences_Entry<bool> Enabled;
-		internal static MelonPreferences_Entry<bool> WeatheredPaint;
+		// In the Soviet campaign roster, rarer than the T-90M (0.25): one T-80UM2 was built.
 		internal static CampaignConfig Campaign;
-		internal static MelonPreferences_Entry<bool> FireWhenLaid;
-		internal static MelonPreferences_Entry<bool> EraEffects;
-		internal static MelonPreferences_Entry<bool> NsvtCases;
-		internal static MelonPreferences_Entry<bool> DrozdOn;
-		internal static MelonPreferences_Entry<string> NightSight;
-		static readonly SettingsMigration[] Migrations = { };
+		internal static MelonPreferences_Entry<string> Apfsds;
+		internal static MelonPreferences_Entry<bool> ForceApfsds;
+		internal static MelonPreferences_Entry<bool> FireWhenLaid;   // the gun fires only on the computer's lay
+		internal static MelonPreferences_Entry<bool> WeatheredPaint;
+		internal static MelonPreferences_Entry<bool> NsvtCases;   // the НСВТ's spent cases
+		internal static MelonPreferences_Entry<bool> EraEffects;   // the set-off ERA look
+		internal static MelonPreferences_Entry<bool> DrozdOn;   // the «Дрозд» is fitted
+		internal static MelonPreferences_Entry<string> NightSight;   // the gunner's night sight: «Агава-2» thermal or «Буран-ПА»
 
-		static readonly string[] MenuScenes = { "MainMenu2_Scene", "MainMenu2-1_Scene", "LOADER_MENU", "LOADER_INITIAL", "t64_menu", "leo2_menu" };
+		const string Repo = "marsattackk/GHPC-T80UM2";
+		// A changed default needs a rule here. MelonLoader keeps the saved one. None so far.
+		static readonly SettingsMigration[] Migrations = { };
 
 		public override void OnInitializeMelon()
 		{
 			BuildStamp.Log(Info.Name);
 			UnityErrors.Install(typeof(T80UM2Mod).Namespace);
-			var cfg = MelonPreferences.CreateCategory("T-80UM2");
-			Enabled = cfg.CreateEntry("Enabled", true, description: "Adds the T-80UM2 as its own unit (Instant Action, campaign roster, ATAC key \"T80UM2\").");
-			Campaign = CampaignConfig.Create(cfg, FriendlyName, 0.15f, 2);
-			WeatheredPaint = PaintFinish.Create(cfg, FriendlyName);
-			Firepower.Init(cfg);
-			DrozdOn = cfg.CreateEntry("Drozd", true, description: "true (default): the Drozd active protection is fitted (two radar heads, four launcher blocks, 8 rounds; switched on and off in play from the vehicle menu). false = the tank has the blocks but no active protection. For T-80UM2s spawned after the change.");
-			FireWhenLaid = cfg.CreateEntry("Fire only when the gun is laid", true, description: "true (default): after a lase the trigger does nothing until the gun has climbed to the elevation the computer set, as the real firing-permission circuit. false = the gun fires at any time, as the game's own tanks do.");
-			EraEffects = cfg.CreateEntry("ERA destruction effects", true, description: "true (default): a set-off Kontakt-5 container is gone with a blast and the plate round it sooted. false = it looks as before (it still works as armour, spent after one hit).");
-			NsvtCases = cfg.CreateEntry("NSVT spent cases", true, description: "true (default): the commander's NSVT drops its spent cases into the canvas catcher bag beside the gun. false = no cases. For T-80UM2s spawned after the change.");
-			NightSight = cfg.CreateEntry("Night sight", Sights.Agava2, description: "Agava-2 (default) = the gunner's thermal sight of the T-80UM (a guess for the T-80UM2: its photos show the older image intensifier); Buran-PA = that image intensifier, as the photos show. Can be changed in play.");
-			Armour.CreatePreset(cfg);
-			PortSettings.Finish(cfg, Info.Version, Migrations);
+			CreateSettings();
 			if (!Enabled.Value) return;
+			PortAmmo.S = Firepower.Settings();   // the rounds' settings (the mission customizer asks for them at the menu)
+			LoadData();
+			RegisterUnit();
+		}
+
+		// The settings in MelonPreferences.cfg, then the file's version and its migrations.
+		void CreateSettings()
+		{
+			var cfg = MelonPreferences.CreateCategory("T-80UM2");
+			Enabled = cfg.CreateEntry("Enabled", true, description: SettingText.Enabled);
+			// Rarer than the T-90M, after two missions: one T-80UM2 was built.
+			Campaign = CampaignConfig.Create(cfg, FriendlyName, 0.15f, 2);
+			WeatheredPaint = PaintFinish.Create(cfg, FriendlyName);   // "Weathered paint" (PaintFinish, as the T-90s)
+			// 3BM42, the serial T-80U's round: the T-90s default to 3BM60, whose long rod needs the reworked loading mechanism, and no
+			// source gives the T-80UM2 that.
+			Apfsds = cfg.CreateEntry("APFSDS", "3BM42", description: SettingText.Apfsds);
+			ForceApfsds = cfg.CreateEntry("Force APFSDS", false, description: SettingText.ForceApfsds);
+			DrozdOn = cfg.CreateEntry("Drozd", true, description: SettingText.Drozd);
+			FireWhenLaid = cfg.CreateEntry("Fire only when the gun is laid", true, description: SettingText.FireWhenLaid);
+			EraEffects = cfg.CreateEntry("ERA destruction effects", true, description: SettingText.EraEffects);
+			NsvtCases = cfg.CreateEntry("NSVT spent cases", true, description: SettingText.NsvtCases);
+			NightSight = cfg.CreateEntry("Night sight", Sights.Agava2, description: SettingText.NightSight);
+			Armour.Config(cfg);
+			UpdateCheck.Config(cfg, FriendlyName, Info.Version, Repo);
+			DevInit(cfg);
+			PortSettings.Finish(cfg, Info.Version, Migrations);
+		}
+
+		// The bundle's prefabs, and the text data (rig, glass, smoke points): the DLL's copy first, the bundle's second.
+		static void LoadData()
+		{
 			var bundle = BundleAssets.Open(Path.Combine(MelonEnvironment.ModsDirectory, "T80UM2", "t80um2"), FriendlyName);
 			Visual = BundleAssets.Prefab(bundle, "T80UM2_visual", FriendlyName, required: true);
-			Armor = BundleAssets.Prefab(bundle, "T80UM2_armor", FriendlyName, required: false, ifMissing: "armour will not be changed.");
-			if (Visual != null) MelonLogger.Msg($"Loaded {FriendlyName} visuals" + (Armor != null ? " and armour." : "."));
-			var rig = bundle != null ? bundle.LoadAsset<TextAsset>(RigMap.AssetName) : null;
-			if (rig != null) Rig = RigMap.Parse(rig.text);
-			var roles = bundle != null ? bundle.LoadAsset<TextAsset>(MaterialRoles.AssetName) : null;
-			if (roles != null) Roles = MaterialRoles.Parse(roles.text);
+			Armour.Prefab = BundleAssets.Prefab(
+				bundle,
+				"T80UM2_armor",
+				FriendlyName,
+				required: false,
+				ifMissing: "armour will not be changed.");
+			if (Visual != null) MelonLogger.Msg($"Loaded {FriendlyName} visuals" + (Armour.Prefab != null ? " and armour." : "."));
+			Armour.Load(bundle);
+			var rig = PortText.Load(bundle, RigMap.AssetName);
+			if (rig != null) Rig = RigMap.Parse(rig);
+			else MelonLogger.Warning($"{FriendlyName}: no rig map; the hatches stay closed.");
+			var roles = PortText.Load(bundle, MaterialRoles.AssetName);
+			if (roles != null) Roles = MaterialRoles.Parse(roles);
+			else MelonLogger.Warning($"{FriendlyName}: no material roles; glass keeps the bundle's own materials.");
 			SmokePoints = SmokeLaunchers.Load(bundle);
+			DevLoadData(bundle);
+		}
 
+		// The T-80UM2 as a unit of its own: the game's unit lists, the Soviet campaign roster and the Showcase.
+		static void RegisterUnit()
+		{
 			var unit = new UnitDef
 			{
 				Key = UnitKey,
@@ -72,14 +111,19 @@ namespace T80UM2
 				BaseUnit = () => BaseUnit,
 				ArmyFrom = () => ArmyFrom,
 				Enabled = () => Enabled.Value,
-				OnSpawn = v => Convert(v, atSpawn: true),
+				OnSpawn = vehicle => Conversion.Convert(vehicle, atSpawn: true),
 				// Other mods convert anything called "T-80" at SkyReady, this keeps ours out of it.
 				ShieldFrom = new[] { "T-80" },
 			};
 			Campaign.Use(unit);
 			UnitRegistry.Add(unit);
 			UnitRegistry.TryRegister();
-			ShowcaseSpawner.Add(new ShowcaseSpawner.Entry { Key = UnitKey, Name = () => FriendlyName, Anchors = new[] { BaseUnit, "T80B", "T72M1" } });
+			ShowcaseSpawner.Add(new ShowcaseSpawner.Entry
+			{
+				Key = UnitKey,
+				Name = () => FriendlyName,
+				Anchors = new[] { BaseUnit, "T72M1" }
+			});
 		}
 
 		public override void OnSceneWasInitialized(int buildIndex, string sceneName)
@@ -91,51 +135,26 @@ namespace T80UM2
 		{
 			if (!Enabled.Value) return;
 			bool menu = MenuScenes.Contains(sceneName);
+			UpdateCheck.OnSceneLoaded(menu);
 			UnitRegistry.StartCampaignRoster();
-			RepairKitCompat.TryPatch(HarmonyInstance);
+			RepairKitCompat.TryPatch(HarmonyInstance);   // RepairKit's repairs reach the modules (when it is installed)
 			ShowcaseSpawner.OnSceneLoaded(sceneName);
 			// Donor bits copied at the menu: some mods destroy the vanilla prefabs after a mission.
 			if (menu)
-				DonorParts.WarmAtMenu(FriendlyName,
-					() => ShtoraScreen.WarmDonors(Firepower.Smoke),
-					() => RemoteMg.Donor.Get(FriendlyName),
-					() => ThermalSight.WarmDonor(FriendlyName),
+				DonorParts.WarmAtMenu(
+					FriendlyName,
+					() => ShtoraScreen.WarmDonors(Countermeasures.Screens),   // the 3Д17's white burst
+					() => RemoteMg.Donor.Get(FriendlyName),   // the НСВТ's T-64B station
+					() => ThermalSight.WarmDonor(FriendlyName),   // the «Агава-2»'s thermal picture
 					() => VanillaMaterials.Warm(Roles));
-			if (!menu) ConvertSweep.AtPlayerReady(UnitKey, v => Convert(v));
+			DevSceneLoaded(sceneName, menu, HarmonyInstance);
+			// A T-80UM2 the spawn patch missed (another mod's spawner) is converted at PlayerReady.
+			if (!menu) ConvertSweep.AtPlayerReady(UnitKey, vehicle => Conversion.Convert(vehicle));
 		}
 
-		static void Convert(Vehicle vehicle, bool atSpawn = false)
-		{
-			if (Visual == null || vehicle == null) return;
-			if (!ConvertSweep.Mark(vehicle)) return;
-			if (!atSpawn) MelonLogger.Warning($"{FriendlyName}: {vehicle.name} was converted after it spawned; it keeps the T-80B's ammunition, and has no Drozd or NSVT.");
-			BaseRigT80B.HideBaseVisuals(vehicle.transform, "T80UM2_", keepLamps: true);
-			Mobility.Apply(vehicle);
-			VisualParts.Attach(vehicle.transform, Visual, "T80UM2_", Bones);
-			PaintFinish.Apply(WeatheredPaint);
-			var template = BaseRigT80B.FindTemplate(vehicle.transform);
-			var flir = Shader.Find("Standard (FLIR)");
-			foreach (var part in vehicle.transform.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith("T80UM2_")).ToArray())
-				if (part.parent == null || !part.parent.name.StartsWith("T80UM2_")) VehiclePaint.ApplyPaint(part.gameObject, template, flir, Painted);
-			if (template == null) MelonLogger.Warning($"{FriendlyName}: no T-80B paint template found; the hull stays on the bundle's material.");
-			VanillaMaterials.Apply(vehicle.transform, Roles);
-			Looks.Apply(vehicle.transform);
-			CrewVoices.Mark(vehicle, FriendlyName);
-			SmokeLaunchers.Seat(vehicle, SmokePoints);
-			SmokeCaps.Apply(vehicle.transform);
-			// A spawned unit's launcher keeps its empty crew cache and never passes GHPC's crew check unless it's refreshed.
-			MelonCoroutines.Start(SmokeLaunchers.RefreshCrewLater(vehicle, FriendlyName));
-			// Order matters from here: armour, rounds and Drozd go on with the turret at rest, before PortAxes moves the pivots.
-			Armour.Apply(vehicle, modules: atSpawn);
-			if (atSpawn) Firepower.Apply(vehicle);
-			HatchRig.Apply(vehicle.transform, Rig, "T80UM2_", FriendlyName);
-			var axes = PortAxes.FromRig(Rig, BaseRigT80B.TurretPivot, BaseRigT80B.GunPivot, FriendlyName);
-			if (axes != null) PortAxes.Apply(vehicle, axes);
-			else MelonLogger.Warning($"{FriendlyName}: bundle's rig map has no axes; the turret turns on the T-80B's pivots.");
-			if (atSpawn && DrozdOn.Value) Drozd.Apply(vehicle);
-			if (atSpawn) Nsvt.Apply(vehicle);
-			Sights.Apply(vehicle);
-			if (atSpawn) MelonCoroutines.Start(Drozd.WireModulesLater(vehicle));
-		}
+		// Dev hooks: optional methods the author's own test harness fills in. They compile to nothing in a normal build.
+		static partial void DevInit(MelonPreferences_Category cfg);
+		static partial void DevLoadData(AssetBundle bundle);
+		static partial void DevSceneLoaded(string sceneName, bool menu, HarmonyLib.Harmony harmony);
 	}
 }

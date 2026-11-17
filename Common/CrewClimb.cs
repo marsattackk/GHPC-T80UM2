@@ -15,7 +15,10 @@ namespace T80UM2.Common
 
 		internal bool MayFire => State == Phase.Out;
 		internal bool HatchOpen => State != Phase.In;
-		internal bool BodyOut => State == Phase.Out || (State == Phase.ClimbingOut && T >= OutSeconds * 0.5f) || (State == Phase.ClimbingIn && T < InSeconds * 0.5f);
+		internal bool BodyOut
+			=> State == Phase.Out
+				|| (State == Phase.ClimbingOut && T >= OutSeconds * 0.5f)
+				|| (State == Phase.ClimbingIn && T < InSeconds * 0.5f);
 
 		internal bool Step(float dt, bool wantOut, bool busy, bool able)
 		{
@@ -42,7 +45,12 @@ namespace T80UM2.Common
 			return State != before;
 		}
 
-		void Go(Phase p, float t) { State = p; T = t; _idle = 0f; }
+		void Go(Phase p, float t)
+		{
+			State = p;
+			T = t;
+			_idle = 0f;
+		}
 
 		static float Clamp01(float x) => x < 0f ? 0f : x > 1f ? 1f : x;
 

@@ -1,0 +1,25 @@
+t80um2_era_kontakt_5_t_80u	paint	-	
+t80um2_glass_backing	glass_backing	-	
+t80um2_glass_lamp	lamp_reflector	fake glass	T62,T55A,LEO2A3
+t80um2_hatch_inner	plain_underside	-	
+t80um2_headlight_glass	lamp_lens	glass semi matte	T80B
+t80um2_headlight_glass_under	lens_under	-	
+t80um2_interior	back_faces	-	
+t80um2_k10t_glass	clear_cover	fake glass	T62,T55A,LEO2A3
+t80um2_lamp_backing	lamp_backing	-	
+t80um2_lamp_cover	lamp_cover	-	
+t80um2_mg_mount_nsvt_t_80u	paint	-	
+t80um2_mg_nsvt	small_arms	-	
+t80um2_mg_pkt	small_arms	-	
+t80um2_net_b	net	-	
+t80um2_net_f	net	-	
+t80um2_optic_wall	optic_wall	-	
+t80um2_periscope_glass	periscope_glass	-	
+t80um2_periscope_recessed	optic_glass	fake glass	T62,T55A,LEO2A3
+t80um2_periscope_window	window_glass	fake glass	T62,T55A,LEO2A3
+t80um2_smooth_barrel_a	barrel	-	
+t80um2_t_80u_body	paint	-	
+t80um2_t_80u_gun	paint	-	
+t80um2_t_80u_turret	paint	-	
+t80um2_t_80um2_turret	paint	-	
+t80um2_us_turret_glass	optic_glass	fake glass	T62,T55A,LEO2A3

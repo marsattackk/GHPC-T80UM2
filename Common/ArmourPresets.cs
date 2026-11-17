@@ -3,6 +3,8 @@ using MelonLoader;
 
 namespace T80UM2.Common
 {
+	// game-scale is matched to GHPC's other tanks and source-only uses the open-source figures. The bundle holds
+	// one set and the other's worked out from it.
 	internal static class ArmourPresets
 	{
 		internal const string GameScale = "game-scale", SourceOnly = "source-only";
@@ -18,18 +20,32 @@ namespace T80UM2.Common
 
 		internal static DmArmour Scaled(DmArmour values, Func<DmArmour.Entry, (float ke, float ce)?> factor)
 		{
-			var d = new DmArmour();
-			foreach (var e in values.Entries)
+			var armour = new DmArmour();
+			foreach (var entry in values.Entries)
 			{
-				var c = new DmArmour.Entry
+				var copy = new DmArmour.Entry
 				{
-					Piece = e.Piece, Mode = e.Mode, Name = e.Name, Material = e.Material, Xray = e.Xray, Source = e.Source,
-					Ke = e.Ke, Ce = e.Ce, KeAfter = e.KeAfter, CeAfter = e.CeAfter, AngleMatters = e.AngleMatters, Slat = e.Slat,
+					Piece = entry.Piece,
+					Mode = entry.Mode,
+					Name = entry.Name,
+					Material = entry.Material,
+					Xray = entry.Xray,
+					Source = entry.Source,
+					Ke = entry.Ke,
+					Ce = entry.Ce,
+					KeAfter = entry.KeAfter,
+					CeAfter = entry.CeAfter,
+					AngleMatters = entry.AngleMatters,
+					Slat = entry.Slat,
 				};
-				if (factor(c) is (float ke, float ce)) { c.Ke *= ke; c.Ce *= ce; }
-				d.Add(c);
+				if (factor(copy) is (float kineticFactor, float chemicalFactor))
+				{
+					copy.Ke *= kineticFactor;
+					copy.Ce *= chemicalFactor;
+				}
+				armour.Add(copy);
 			}
-			return d;
+			return armour;
 		}
 
 		internal sealed class Pair
@@ -47,7 +63,11 @@ namespace T80UM2.Common
 			internal DmArmour For(DmArmour bundle, string preset)
 			{
 				if (bundle == null || preset == _bundlePreset) return bundle;
-				if (!ReferenceEquals(bundle, _from)) { _from = bundle; _other = Scaled(bundle, _toOther); }
+				if (!ReferenceEquals(bundle, _from))
+				{
+					_from = bundle;
+					_other = Scaled(bundle, _toOther);
+				}
 				return _other;
 			}
 		}
