@@ -1,6 +1,6 @@
-// LiveRound.Init resets RhaPenetrationOverride to 0 (resetLocalValues): an override set before Init reaches only the
-// ShotInfo; the round itself then uses Info.RhaPenetration x (speed / MaxSpeed)^2. penAfterInit sets it again after Init
-// (both users do since 2026-11-07: the APS from the start, the T-90M's air burst since its fix).
+// LiveRound.Init resets RhaPenetrationOverride to 0 (resetLocalValues). An override set before Init reaches only the
+// ShotInfo, and the round itself then uses Info.RhaPenetration x (speed / MaxSpeed)^2. penAfterInit sets it again after
+// Init. Both users (the APS and the T-90M's air burst) pass it.
 using System;
 using System.Reflection;
 using GHPC;

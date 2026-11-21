@@ -110,7 +110,7 @@ Like any thermal it sees through smoke and the laser doesn't. A range taken into
 
 The photos of this tank actually show the older TPN-4 Buran-PA image intensifier, so `Night sight` swaps that in, and
 it changes at once without a restart. The Buran-PA works without the computer, like the T-80B's night sight, so go
-into manual first and set the range by hand the way the T-80B guide says. Its range scale stops at 1500 m. Coming back from
+into manual first and set the range by hand the way the T-80B guide says. Its range scales go out to 2000 m. Coming back from
 the Buran-PA, the 1G46 keeps a range of 2000 m at most until you lase again.
 
 ## The commander's TKN-4S and the NSVT
@@ -164,7 +164,7 @@ and throws a cone of fragments into its path. AI T-80UM2s get it too.
 - It can't see below -6° or above +20°. A shot from low and close or a top attack gets through, and so does anything
   from the side or rear.
 - There are 4 rounds a side, and each side needs 0.35 s before it can fire again. Two missiles at once on the same side
-  can get one through. The other side has its own radar and doesn't care.
+  can get one through. The other side has its own radar and only has to wait 35 ms.
 - It's no friend of infantry. The fragments go forward, and anyone standing in front of the tank when it fires is in
   trouble.
 
@@ -219,12 +219,23 @@ left them out. The autoloader takes 7.1 s a round, and the coax PKT has 1250 rou
 | 3BM59 "Svinets-1" | ~600 mm at the muzzle |
 | 3BM60 "Svinets-2" | ~690 mm at the muzzle, ~600 mm at 2 km |
 | 9M119M "Invar" | 700 mm, tandem |
-| 3BK18M HEAT, 3OF26 HE-Frag | the game's own rounds |
+| 3BK29M HEAT (default) | 700 mm, tandem, 915 m/s |
+| 3BK31 "Start-2" HEAT | 800 mm, triple charge |
+| 3BK18M HEAT | 585 mm, the game's own round |
+| 3OF26 HE-Frag | the game's own round |
 
 You pick the dart in the game's normal ammo menu. 3BM42 is the default because it's what a serial T-80U carried, and
 it's plenty for an M60 or a Leopard 1. For the front of an Abrams, take 3BM60 if you've got it and go for the lower
 plate at long range. The serial T-80U's loader can't take long rods like 3BM59 and 3BM60, so those two assume this
 tank's was reworked like later T-80s'. Treat them as a what-if.
+
+The HEAT is picked in the same menu, which has a Random entry for it too. 3BK29M is the default and does a T-80B's front or a Leopard 2A0's glacis. Its
+precursor clears add-on ERA like Kontakt-1 for about 50 mm, but not built-in ERA like Kontakt-5. 3BK31 never got past
+trials. With three charges it beats both kinds and still has 660-680 mm behind them, enough for most of an M1's turret
+front. The recap shows its two main charges as two separate jets. Tandem rounds (3BK29M, 3BK31 and the Invar) go off
+with a small pop just before the main burst, and the recap draws that precursor as a short yellow line. Other mods' ERA (PIL's T-72s and T-80s) takes the
+same rules. The campaign only rolls 3BK29M and 3BK18M unless
+you turn on `Force HEAT`.
 
 HEAT for light vehicles and anything with an M60's armour or less, HE for infantry and soft stuff, same as on the T-80B.
 
@@ -247,14 +258,22 @@ before editing it.
 | `Add to campaign roster` | true / false | true |
 | `Campaign prevalence` | how common it is (1 = as common as a typical tank) | 0.15 |
 | `Campaign unlock after missions` | number | 2 |
-| `Weathered paint` | true / false (clean factory paint) | true |
 | `APFSDS` | `"3BM42"` / `"3BM59"` / `"3BM60"`, where the game doesn't pick one itself | 3BM42 |
 | `Force APFSDS` | true: the campaign gives every T-80UM2 the `APFSDS` round instead of drawing one from its ammo supply | false |
-| `Drozd` | false: the blocks are there but do nothing | true |
+| `HEAT` | `"3BK29M"` / `"3BK31"` / `"3BK18M"`, where the game doesn't pick one itself | 3BK29M |
+| `Force HEAT` | true: the campaign gives every T-80UM2 the `HEAT` round instead of drawing 3BK29M or 3BK18M from its ammo supply | false |
+| `Random APFSDS` | true: each T-80UM2 rolls its own APFSDS from `APFSDS pool` in Instant Action and scripted missions, and the mission customizer's ammo dropdown starts on Random; the campaign keeps its own ammo supply | false |
+| `APFSDS pool` | the rounds `Random APFSDS` rolls from, as name:weight (`"3BM42:3, 3BM60:1"`); empty: every APFSDS at its campaign weight | `""` |
+| `Random HEAT` | true: each T-80UM2 rolls its own HEAT from `HEAT pool` in Instant Action and scripted missions, and the mission customizer's HEAT dropdown starts on Random; the campaign keeps its own ammo supply | false |
+| `HEAT pool` | the rounds `Random HEAT` rolls from, as name:weight (`"3BK29M:3, 3BK18M:1"`); empty: 3BK29M and 3BK18M at their campaign weights, 3BK31 only if you name it | `""` |
+| `Ammunition load` | `"Full"` / `"Autoloader"` (only the 28 rounds of the autoloader, 2 of them missiles), on every T-80UM2, friend and foe | Full |
+| `Empty racks` | racks to leave empty, comma separated (`"hull"`); replaces `Ammunition load`; the autoloader is always loaded | `""` |
+| `Night sight` | `"Agava-2"` / `"Buran-PA"`, changes at once | Agava-2 |
 | `Fire only when the gun is laid` | true: after a lase the gun waits until it's at the elevation the computer set. false: fires any time, but a shot while it's still climbing falls short | true |
+| `Weathered paint` | true / false (clean factory paint) | true |
+| `Drozd` | false: the blocks are there but do nothing | true |
 | `ERA destruction effects` | true: a Kontakt-5 box that's gone off blows open and the plate round it is sooted | true |
 | `NSVT spent cases` | false: no cases, the belt still feeds | true |
-| `Night sight` | `"Agava-2"` / `"Buran-PA"`, changes at once | Agava-2 |
 | `Armour preset` | `"game-scale"` / `"source-only"` (the lower published figures) | game-scale |
 | `Check for updates` | true / false | true |
 
@@ -312,7 +331,11 @@ This README follows `main`, which can be ahead of the latest release.
 
 The 3D model and textures are War Thunder's T-80UM2, taken from War Thunder's game files. They belong to Gaijin
 Entertainment and they're not covered by this repository's licence. The same goes for the armour shapes, cut from War
-Thunder's damage model. Everything else (the armour values, Drozd, the sights and their reticles, the fire control, the
-ammo, the interior) was built for GHPC from Russian sources and, where those ran out, my own best guesses.
+Thunder's damage model, and for a few files in `Resources\` made from other War Thunder models: the NSVT's belt round
+(`kord_belt_round*`, from the Kord belt of War Thunder's T-90A) and the 3BM60 and 9M119M round meshes
+(`round_mesh_*.mesh`). The round textures (`round_*_co.png`) and the trimmed running gear (`T80B_wheels_trimmed.bin`) are
+made from GHPC's own assets, which belong to Radian Simulations and aren't covered either. Everything else (the armour
+values, Drozd, the sights and their reticles, the fire control, the ammo, the interior) was built for GHPC from Russian
+sources and, where those ran out, my own best guesses.
 
 The source code is under the [GNU General Public License v3.0](LICENSE).

@@ -7,13 +7,13 @@ namespace T80UM2
 {
 	// What the T-80UM2 shows beyond its body: the T-80B's number plates, lamps and lamp glows on the War Thunder model's lamps,
 	// the hatch lids' undersides painted. Run at spawn after the paint, before PortAxes moves the pivots (places are prefab
-	// space with the turret at rest). The driver's hatch opens through HatchRig (the T-80B's dormant AnimatedPart woken); the
-	// stub needs nothing: the T-80B has no ejector (its autoloader puts the stub back in the carousel tray, as the real
-	// T-80's does).
+	// space with the turret at rest). The driver's hatch opens through HatchRig (the T-80B's dormant AnimatedPart woken).
+	// The stub needs nothing, because the T-80B has no ejector: its autoloader puts the stub back in the carousel tray, as
+	// the real T-80's does.
 	internal static partial class Conversion
 	{
 		// The turret-rear march-number lamp (War Thunder ex_lantern_b_01): its glass (headlight_glass, 15 x 15 cm) has its area
-		// centre at (-0.195, 2.440) and its outermost face at z -2.269; the plates sit 7 mm outside it, as on the T-90s.
+		// centre at (-0.195, 2.440) and its outermost face at z -2.269. The plates sit 7 mm outside it, as on the T-90s.
 		// Turret-bone space: prefab minus the T-80B's turret bone (0, 1.412, -1.1715). The T-80B's plates (12.4 x 8.2 cm, as the
 		// T-72's) x1.2 fill the window. The lamp has two windows (as the T-90M's), centres 6.3 cm apart (measured against
 		// the model's lamp face): the T-80B's 7.3 cm put the right digit over the frame.
@@ -54,7 +54,7 @@ namespace T80UM2
 		}
 
 		// The canvas mantlet cover (War Thunder ex_decor_01, on the gun bone): skinned between turret and gun so it
-		// stretches with elevation (MantletCover, as the T-90s); before PortAxes, as theirs.
+		// stretches with elevation (MantletCover, as on the T-90s). Done before PortAxes, like theirs.
 		static void SkinMantletCover(Parts parts)
 		{
 			var turret = RigBones.Turret(parts.Root);
@@ -76,9 +76,8 @@ namespace T80UM2
 			LampMove.Apply(parts.Root, Lamps, new[] { "gs_turret", "gst_illum" }, T80UM2Mod.FriendlyName);
 		}
 
-		// Hatch undersides (HatchUndersides): the plain fallback, then the turret's paint from a smooth plate of the
-		// t_80u_turret atlas (4096 x 4096): x 832-1062, y 2576-2686 px (picked because its worn albedo has no seam and
-		// it is flat).
+		// Hatch undersides (HatchUndersides): the plain fallback, then the turret's paint from a smooth plate of the t_80u_turret
+		// atlas (4096 x 4096): x 832-1062, y 2576-2686 px (picked because its worn albedo has no seam and it is flat).
 		static void PaintHatchUndersides(Parts parts)
 		{
 			if (HatchUndersides.Plain(parts.Root, "t80um2_hatch_inner") == 0)

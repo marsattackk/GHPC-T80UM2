@@ -293,7 +293,7 @@ namespace T80UM2.Common
 		[DefaultExecutionOrder(990)]
 		internal sealed class SeatFacing : MonoBehaviour
 		{
-			// Set when a tank seats a crewman at a pedestal gun; none does in a normal build (CS0649 is off for this declaration only).
+			// Set when a tank seats a crewman at a pedestal gun. None does in a normal build (CS0649 is off for this declaration only).
 #pragma warning disable CS0649
 			internal Transform Up, A, B;
 #pragma warning restore CS0649
@@ -314,7 +314,7 @@ namespace T80UM2.Common
 			internal Transform Seat;
 			internal Quaternion SeatRest = Quaternion.identity;
 			internal Pose P = new Pose();
-			// Set when a tank draws the crewman; none does in a normal build (CS0649 is off for this declaration only).
+			// Set when a tank draws the crewman, which none does in a normal build (CS0649 is off for this declaration only).
 #pragma warning disable CS0649
 			internal Drawn Figure;
 #pragma warning restore CS0649
@@ -530,7 +530,7 @@ namespace T80UM2.Common
 				}
 			}
 
-			// A nested group is only tested inside its parent's bounds; out on the roof he'd never be hit.
+			// A nested group is only tested inside its parent's bounds, so out on the roof he'd never be hit.
 			void Detach(bool detach)
 			{
 				if (_fig == null) return;

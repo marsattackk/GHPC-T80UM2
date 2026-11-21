@@ -120,9 +120,10 @@ whatever the field.
    table at the top of this page, or "inferred" if there's no drawing.
 2. Put the marks under the group whose alignment moves them right: fixed marks under `Boresight`, range scales under
    `VerticalRange` or `Impact`, ballistic scales as `ballistic` groups below those.
-3. Run the tests. A changed file fails `ShippedReticleTests` until its expansion is written again: set
-   `T80UM2_UPDATE_EXPANDED=1`, run once, read the diff of `tests\expanded\`, then commit both.
-   `tests\expanded\` holds one text file per reticle (`1g46_day.txt` and so on): every node, indented by depth, then the
+3. Run the tests. A changed file fails `ShippedReticleTests` until its expansion is written again, which this PowerShell
+   line does without leaving the variable set (while it is, the test passes whatever the files hold):
+   `$env:T80UM2_UPDATE_EXPANDED = "1"; dotnet test tests; Remove-Item Env:T80UM2_UPDATE_EXPANDED`. Read the diff of
+   `tests\expanded\`, then commit both. `tests\expanded\` holds one text file per reticle (`1g46_day.txt` and so on): every node, indented by depth, then the
    screen items. The tests only compare. The variable is the one way to write them, so a changed line is always a
    decision you read in the diff.
 4. Check it in game: problems in a file show as warnings in the MelonLoader console, and the reticle is drawn without

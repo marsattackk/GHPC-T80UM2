@@ -4,14 +4,15 @@ using MelonLoader.Utils;
 using T80UM2.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T80UM2.T80UM2Mod), "T-80UM2", "0.2.0", "marsattackk")]
+[assembly: MelonInfo(typeof(T80UM2.T80UM2Mod), "T-80UM2", "0.3.0", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
+[assembly: HarmonyDontPatchAll]   // off means off: nothing is patched until Enabled has been read
 
 namespace T80UM2
 {
 	// Loads the bundle, registers the unit on the T80B prefab and hangs the War Thunder model's HULL / TURRET / GUN on the base
 	// rig's bones (the base's visuals off, paint, real axes). Armour, rounds and the Drozd go on with the turret at rest, before
-	// the axes move; the НСВТ, the sights and the module wiring follow (Conversion.Convert).
+	// the axes move. The НСВТ, the sights and the module wiring follow (Conversion.Convert).
 	public partial class T80UM2Mod : MelonMod
 	{
 		internal const string UnitKey = "T80UM2";
@@ -20,7 +21,7 @@ namespace T80UM2
 		internal static VanillaEdits Edits;   // the T-80B's pieces switched off or changed (Resources\vanilla_edits.txt)
 		internal static MaterialRoles Roles;   // material roles: the vanilla glass at spawn
 		internal static RigMap Rig;   // moving parts: hatches, the turret and gun axes
-		internal static Vector3[] SmokePoints;   // the smoke tubes' launch points (from the bundle)
+		internal static Vector3[] SmokePoints;   // the smoke tubes' launch points (smoke_points: the DLL's copy, else the bundle's)
 
 		internal const string FriendlyName = "T-80UM2";
 		const string BaseUnit = "T80B";   // registry key of the vanilla prefab "T80B" (crew, interior, damage model, running gear)
@@ -33,6 +34,14 @@ namespace T80UM2
 		internal static CampaignConfig Campaign;
 		internal static MelonPreferences_Entry<string> Apfsds;
 		internal static MelonPreferences_Entry<bool> ForceApfsds;
+		internal static MelonPreferences_Entry<bool> RandomApfsds;
+		internal static MelonPreferences_Entry<string> ApfsdsPool;
+		internal static MelonPreferences_Entry<string> Heat;
+		internal static MelonPreferences_Entry<bool> ForceHeat;
+		internal static MelonPreferences_Entry<bool> RandomHeat;
+		internal static MelonPreferences_Entry<string> HeatPool;
+		internal static MelonPreferences_Entry<string> AmmunitionLoad;
+		internal static MelonPreferences_Entry<string> EmptyRacks;
 		internal static MelonPreferences_Entry<bool> FireWhenLaid;   // the gun fires only on the computer's lay
 		internal static MelonPreferences_Entry<bool> WeatheredPaint;
 		internal static MelonPreferences_Entry<bool> NsvtCases;   // the НСВТ's spent cases
@@ -50,7 +59,8 @@ namespace T80UM2
 			UnityErrors.Install(typeof(T80UM2Mod).Namespace);
 			CreateSettings();
 			if (!Enabled.Value) return;
-			PortAmmo.S = Firepower.Settings();   // the rounds' settings (the mission customizer asks for them at the menu)
+			PatchClasses.Apply(this);
+			PortAmmo.S = Firepower.Settings();   // the rounds' settings (the mission customiser asks for them at the menu)
 			LoadData();
 			RegisterUnit();
 		}
@@ -62,16 +72,24 @@ namespace T80UM2
 			Enabled = cfg.CreateEntry("Enabled", true, description: SettingText.Enabled);
 			// Rarer than the T-90M, after two missions: one T-80UM2 was built.
 			Campaign = CampaignConfig.Create(cfg, FriendlyName, 0.15f, 2);
-			WeatheredPaint = PaintFinish.Create(cfg, FriendlyName);   // "Weathered paint" (PaintFinish, as the T-90s)
 			// 3BM42, the serial T-80U's round: the T-90s default to 3BM60, whose long rod needs the reworked loading mechanism, and no
 			// source gives the T-80UM2 that.
 			Apfsds = cfg.CreateEntry("APFSDS", "3BM42", description: SettingText.Apfsds);
 			ForceApfsds = cfg.CreateEntry("Force APFSDS", false, description: SettingText.ForceApfsds);
-			DrozdOn = cfg.CreateEntry("Drozd", true, description: SettingText.Drozd);
+			RandomApfsds = cfg.CreateEntry("Random APFSDS", false, description: SettingText.RandomApfsds);
+			ApfsdsPool = cfg.CreateEntry("APFSDS pool", "", description: SettingText.ApfsdsPool);
+			Heat = cfg.CreateEntry("HEAT", "3BK29M", description: SettingText.Heat);
+			ForceHeat = cfg.CreateEntry("Force HEAT", false, description: SettingText.ForceHeat);
+			RandomHeat = cfg.CreateEntry("Random HEAT", false, description: SettingText.RandomHeat);
+			HeatPool = cfg.CreateEntry("HEAT pool", "", description: SettingText.HeatPool);
+			AmmunitionLoad = cfg.CreateEntry("Ammunition load", "Full", description: SettingText.AmmunitionLoad);
+			EmptyRacks = cfg.CreateEntry("Empty racks", "", description: SettingText.EmptyRacks);
+			NightSight = cfg.CreateEntry("Night sight", Sights.Agava2, description: SettingText.NightSight);
 			FireWhenLaid = cfg.CreateEntry("Fire only when the gun is laid", true, description: SettingText.FireWhenLaid);
+			WeatheredPaint = PaintFinish.Create(cfg, FriendlyName);   // "Weathered paint" (PaintFinish, as the T-90s)
+			DrozdOn = cfg.CreateEntry("Drozd", true, description: SettingText.Drozd);
 			EraEffects = cfg.CreateEntry("ERA destruction effects", true, description: SettingText.EraEffects);
 			NsvtCases = cfg.CreateEntry("NSVT spent cases", true, description: SettingText.NsvtCases);
-			NightSight = cfg.CreateEntry("Night sight", Sights.Agava2, description: SettingText.NightSight);
 			Armour.Config(cfg);
 			UpdateCheck.Config(cfg, FriendlyName, Info.Version, Repo);
 			DevInit(cfg);
@@ -112,7 +130,7 @@ namespace T80UM2
 				ArmyFrom = () => ArmyFrom,
 				Enabled = () => Enabled.Value,
 				OnSpawn = vehicle => Conversion.Convert(vehicle, atSpawn: true),
-				// Other mods convert anything called "T-80" at SkyReady, this keeps ours out of it.
+				// Other mods convert anything called "T-80" at SkyReady, so this keeps the T-80UM2 out of it.
 				ShieldFrom = new[] { "T-80" },
 			};
 			Campaign.Use(unit);

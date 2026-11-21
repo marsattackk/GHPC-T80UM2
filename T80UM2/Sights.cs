@@ -37,8 +37,7 @@ namespace T80UM2
 			// The manual range input step: not found, the T-90A's (inferred)
 			RangeStep = 100,
 			DisplayRangeIncrement = 50,
-			// The 1В528's zone is 3.0 x 4.0 тыс («Комплекс управления огнем 1А45»); GHPC's 1A33 value kept, as in the T-90A
-			// (inferred)
+			// The 1В528's zone is 3.0 x 4.0 тыс («Комплекс управления огнем 1А45»). GHPC's 1A33 value kept as in the T-90A (inferred)
 			FireGateAngle = 0.1f,
 			// A range set by hand: the sight's range scales (the T-90A's 1G46)
 			ManualMode = true,
@@ -49,8 +48,8 @@ namespace T80UM2
 		internal static void Apply(Vehicle vehicle)
 		{
 			if (vehicle == null) return;
-			// The commander's lid never opens: pinned shut whatever opens the base T-80B's commander's hatch part (the bail-out
-			// plays it)
+			// The commander's lid never opens: pinned shut whatever opens the base T-80B's commander's hatch part
+			// (the bail-out plays it)
 			foreach (var follower in vehicle.GetComponentsInChildren<HatchRig.Follower>(true))
 			{
 				if (follower.GetComponentsInChildren<Transform>(true).Any(child => child.name == "T80UM2_HATCH_COMMANDER"))
@@ -143,7 +142,7 @@ namespace T80UM2
 		}
 
 		// The rounds for the reticles' ballistic scales: the unit's loaded main-gun rounds by kind (the port's own, whichever
-		// the firepower setup loaded), the coax's belt; one reticle per set (PortReticles caches by the rounds).
+		// the firepower setup loaded), the coax's belt. One reticle per set (PortReticles caches by the rounds).
 		static Dictionary<string, AmmoCodexScriptable> Rounds(Vehicle vehicle, List<string> problems)
 		{
 			var clips = vehicle.GetComponent<LoadoutManager>()?.LoadedAmmoList?.AmmoClips;
@@ -167,8 +166,8 @@ namespace T80UM2
 				{ "he", Main(AmmoType.AmmoCategory.Explosive) ?? Named("ammo_3OF26") },
 				{ "coax", coax ?? Named("ammo_762x54R") },
 			};
-			// The ТКН-4С's З scale (the T-90A's Kord): no function on the T-80UM2 (an open, hand-laid НСВТ); drawn for GHPC's
-			// 12.7 mm B-32 ('ammo_B32', the NSVT's) when loaded, else for the coax (its marks then read the PKT).
+			// The ТКН-4С's З scale (the T-90A's Kord): no function on the T-80UM2 (an open, hand-laid НСВТ), but it's drawn for
+			// GHPC's 12.7 mm B-32 ('ammo_B32', the NSVT's) when loaded, else for the coax (its marks then read the PKT).
 			table["b32"] = Named("ammo_B32") ?? table["coax"];
 			foreach (var entry in table.Where(entry => entry.Value == null))
 				problems.Add($"no '{entry.Key}' round for the reticles' scales");

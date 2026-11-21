@@ -27,21 +27,22 @@ Then, in this order:
 4. Check the T-80UM2 is in Instant Action, the mission customiser and the Soviet side's campaign.
 5. Spawn one and read the log again. Conversion runs at spawn, so most warnings only show up here.
 6. Go through the test list at the bottom.
-7. Play a mission with the mod off. Some patches touch every unit, so check a vanilla T-80B still behaves.
+7. Check a vanilla T-80B in a mission with the mod on: some patches touch every unit.
 
 ## What it looks like in the log
 
 - `Game field X.y not found: a game update may have changed it, ...` comes from `Reflect`. The word after "Game" can
   also be `method`, `property` or `property setter`. Once per session per member. `can't be read as bool (...)` means
   the field is still there but its type changed. `can't be looked up (...)` usually means a method gained an overload.
-- A Harmony error at startup naming a patch class, with `Undefined target method` or similar: the patch target went.
+- `... could not be patched (a game update?), so that part of the mod is off` with the patch class in front: its
+  target went. Each class goes in on its own, so the rest of the mod still works.
 - `<feature> failed (the game carries on without it this time; 1 of 3 logged)` is `PatchGuard`. The patch ran and the
   code inside threw. The stack trace has the line. It goes quiet after three.
 - `Unity exception in our code: ...` is `UnityErrors`, an exception in one of the mod's behaviours or coroutines.
 - `T-80UM2 <step> failed (<what you get instead>): ...` is one row of the conversion tables throwing. The spawn steps are
   base visuals, drive, visuals, paint, glass materials, running gear, mantlet cover, tactical numbers, lamps, hatch
   undersides, LOD materials, crew voices, smoke launchers, armour, interior, modules, ammo setup, coax setup, gun setup,
-  smoke grenade, hatches, turret axis, Drozd, NSVT and sight setup. The late ones, two frames after the spawn, are smoke
+  smoke grenade, hatches, turret axis, Drozd, NSVT and commander's lid. The late ones, two frames after the spawn, are smoke
   crew refresh, sight fitting, NSVT late setup, module wiring, thermal heat and ammunition self-check. The rest of the
   conversion went on. `T-80UM2: <unit> was converted
   after it spawned; it keeps the T-80B's ammunition, and has no Drozd or NSVT` means the spawn patch missed that unit and
@@ -52,10 +53,10 @@ Then, in this order:
   rounds in flight.
 - `donor prefab 'T80B' not in the unit registry` or `vanilla material '...' not found`: a borrowed part couldn't be
   copied.
-- `T-80UM2: bundle has no armour values; the T-80B's armour stays.` isn't a game update. The bundle is the wrong one, or
-  a text file has gone missing from `Resources\` and from the bundle. `T-80UM2 armour: <n> T-80B armour piece(s) not found
-  ...` can be one: it names the T-80B's armour pieces that the bundle's `vanilla_edits` switches off and GHPC no longer has
-  under that name.
+- `T-80UM2: no armour values in the DLL or the bundle; the T-80B's armour stays.` isn't a game update: `dm_armour.txt`
+  has gone missing from `Resources\` and the bundle has no copy either. `T-80UM2 armour: <n> T-80B armour piece(s) not
+  found ...` can be one: it names the T-80B's armour pieces that `vanilla_edits` switches off and GHPC no longer has under
+  that name.
 
 A missing reflected member is looked up once and cached, and the feature code checks for null and skips, so a rename
 shows up as a feature that's gone quiet, not a crash. Things that break most often, roughly in order: a private field
@@ -110,7 +111,7 @@ fire all work with the computer off and the range set by hand. Broken: the sight
 before it's laid, reticles don't draw or keep the old one, the night key does nothing, the «Буран-ПА» lases anyway.
 
 **Commander's ТКН-4С.** `T80UM2\Sights.Tkn4s.cs` reads `CameraSlot._reparentTarget` and builds the sight from two
-copies of the T-80B's own thermal optic. `TargetDesignation.cs` patches `CrewBrainWeaponsModule.SetAimVector` so GHPC's
+copies of the T-80B's own TPN-3-49 night sight. `TargetDesignation.cs` patches `CrewBrainWeaponsModule.SetAimVector` so GHPC's
 Aim Override key slews the turret to his line of sight. Broken: the ТКН-4С has no view or sits at the wrong place, or
 the target designation key does nothing.
 
@@ -157,8 +158,8 @@ These don't go through `Reflect`, so a rename gives no warning of that shape.
 
 `tools\check-game.ps1` reads the literal names in `Reflect.*`, `AccessTools.Method`, `Traverse.Create(x).Field`,
 `Type.GetField` / `GetMethod` and the hit-zone table of `ModuleBuilder`. It cannot check a field enumeration
-(`GetFields` in `PortAmmo.MakeClip`, `RemoteMg.Platform` and `DonorParts.Scrub`) or a lookup whose name is a variable:
-after a game update read those against the class by hand. The script lists where they are.
+(`GetFields`, as in `PortAmmo.MakeClip` or `RemoteMg.Platform`) or a lookup whose name is a variable: after a game update
+read those against the class by hand. The script's summary lists every one of them, and that list is the one to go by.
 
 The rest, which no script reads:
 
@@ -172,6 +173,12 @@ The rest, which no script reads:
   «Агава-2»'s thermal picture) and the units `material_roles` names (`T80B`, `T62`, `T55A`, `LEO2A3`). `DonorParts.cs` copies
   them at the main menu, because VanillaAssetUtil can destroy the prefabs after a mission.
 - **Ammunition** (`T80UM2\Firepower.cs`, set up by the conversion's ammo setup row): clips `clip_3BM32`, `clip_3BK18M` and `clip_9M112M` from the T-80B's list.
+  The three HEAT rounds (`Common\Heat125.cs`) are all copies of `clip_3BK18M`. Built-in ERA is found by the armour's
+  name (Kontakt-5, Relikt), so a mod that renames its Kontakt-5 blocks turns them into add-on ERA for 3BK29M.
+  3BK31's second jet (`Common\SplitCharge.cs`) hangs off `LiveRound.logHit` and is drawn as a jet through
+  `AarController.createShotTrace`. Without them it's one jet again, or fragment lines in the recap.
+  The tandem pop and the white precursor line (`Common\TandemLook.cs`) use `LiveRound.doImpactVFX`,
+  `ParticleEffectsManager.CreateImpactEffectOfType` and `ShotTraceVisual.jetColor`. Lose them and tandem rounds look like plain HEAT.
 - **Fonts and materials**: `Soviet7SegmentFont SDF` and `Reticle LiberationSans SDF` where the reticle files name them,
   `Standard (FLIR)`, `GHPC NOD gen 2 RU` (the «Буран-ПА»'s image intensifier look) and `see-through teal gray` for the
   x-ray (no log line if that one goes).

@@ -17,10 +17,10 @@ namespace T80UM2
 	// (inferred eye point). Two copies of the T-80B's own TPN-3-49 optic (no donor vehicle), extra sights of the gun's fire
 	// control for the main gun and coax. With «Дубль» the commander lays and fires the gun looking through it, the computer
 	// off, the range set by hand on its stadia and the range line on its Б / О / К scales, no laser («ПНК-4С»,
-	// odetievbrony.ru; the shared ComputerOff in hand-range mode, and ReticleRangeLine). The cupola with the ТКН-4С stays
-	// fixed at its rest place on the turret with its hatch shut: nothing turns it, and «Дубль» and the target designation
-	// still lay the gun. Target designation: in the commander's own view (commander head, NODs) GHPC's Aim Override key
-	// slews the turret to his line of sight («ПНК-4С»; the shared TargetDesignation).
+	// odetievbrony.ru), through the shared ComputerOff in hand-range mode and ReticleRangeLine. The cupola with the ТКН-4С
+	// stays fixed at its rest place on the turret with its hatch shut: nothing turns it, and «Дубль» and the target
+	// designation still lay the gun. Target designation: in the commander's own view (commander head, NODs) GHPC's Aim
+	// Override key slews the turret to his line of sight («ПНК-4С», done by the shared TargetDesignation).
 	internal static partial class Sights
 	{
 		const string TknDayFile = "tkn4s_day.jsonc";
@@ -35,14 +35,14 @@ namespace T80UM2
 		// The Б scale's span on Рис. 4.65а, to 40 («ПНК-4С», odetievbrony.ru)
 		static readonly Vector2 TknRange = new Vector2(0f, 4000f);
 		// In «Дубль» the gun is slaved to the ТКН-4С's line by angle, aligned «в согласованном положении» by the gun position
-		// sensor's adjustment («ПНК-4С», odetievbrony.ru); the alignment distance isn't given: the family's distant-point rule
+		// sensor's adjustment («ПНК-4С», odetievbrony.ru). The alignment distance isn't given: the family's distant-point rule
 		// for the gun's day sight, «не менее 1600 м» («Танк Т-72А. Техническое описание и инструкция по эксплуатации», 1986,
-		// p. 66), inferred for the ТКН-4С. The lines meet there (the shared GunnerFcs.Converge); the view sits 0.59 m right of
+		// p. 66), inferred for the ТКН-4С. The lines meet there (the shared GunnerFcs.Converge), with the view 0.59 m right of
 		// and over the gun.
 		const float TknConverge = 1600f;
-		// Eye: 1.5 cm in front of the front of the War Thunder commander_panoramic_sight damage box (x 0.348..0.834, y 1.848..2.357,
-		// z -1.302..-1.045 in the prefab), its upper middle, as the T-90A's (inferred: the head's window is not measured on
-		// this model).
+		// Eye: 1.5 cm in front of the front of the War Thunder commander_panoramic_sight damage box (x 0.348..0.834,
+		// y 1.848..2.357, z -1.302..-1.045 in the prefab), its upper middle, as the T-90A's (inferred: the head's window
+		// is not measured on this model).
 		internal static readonly Vector3 TknEye = new Vector3(0.591f, 2.240f, -1.030f);
 
 		// Two inactive copies of the TPN-3-49 (slot, optic, reticle mesh, post volume) for the ТКН-4С's channels.
@@ -67,7 +67,7 @@ namespace T80UM2
 			station.TknDay = Copy();
 			station.TknNight = Copy();
 			// The day channel draws its reticle as the 1G42's does: a copy of that reticle mesh object (its renderer and post
-			// draw set up for a day picture); the TPN-3-49's draws light strokes in a day picture.
+			// draw set up for a day picture), because the TPN-3-49's draws light strokes in a day picture.
 			var dayMesh = station.Day != null ? station.Day.reticleMesh : null;
 			if (dayMesh != null && station.TknDay.reticleMesh != null)
 			{
@@ -133,8 +133,8 @@ namespace T80UM2
 				var file = optic == night ? TknNightFile : TknDayFile;
 				optic.reticleMesh.reticleSO = Reticles.Build(file, optic.reticleMesh.reticleSO, fontHost, rounds);
 				ReticleMeshes.ClearSmr(optic.reticleMesh);
-				// The copy's built mesh and light states are the original's: cleared for the new reticle (the shared
-				// ReticleBuild.PrepareCopy).
+				// The copy's built mesh and light states are the original's, so they're cleared for the new reticle
+				// (the shared ReticleBuild.PrepareCopy).
 				ReticleBuild.PrepareCopy(optic.reticleMesh);
 				// The hand range on the selected round's scale
 				optic.gameObject.AddComponent<ReticleRangeLine>().Init(optic, fcs, () => fcs.CurrentAmmoType);
@@ -168,7 +168,7 @@ namespace T80UM2
 			night.slot.LinkedNightSight = null;
 			SightMotion.Stabilised(day.slot);
 			SightMotion.Stabilised(night.slot, keepBlur: true);
-			// The day channel's indicator strip (Рис. 4.65а: the round's letter, «ГОТОВ»; the description's screen section).
+			// The day channel's indicator strip (Рис. 4.65а and the description's screen section: the round's letter, «ГОТОВ»).
 			var tknSpec = Reticles.Spec(TknDayFile);
 			var strip = ReticleBuild.BuildOverlay(tknSpec, day.transform, (float)tknSpec.Fov, problems);
 			SightReadout.Attach(
@@ -179,7 +179,7 @@ namespace T80UM2
 			foreach (var optic in new[] { night, day }) optic.gameObject.SetActive(true);
 			var holder = vehicle.transform.Find("T80UM2 TKN-4S setup");
 			if (holder != null) UnityEngine.Object.Destroy(holder.gameObject);
-			// Into the unit's camera list (the shared RemoteMg: every path to the camera manager; Shift back in).
+			// Into the unit's camera list (the shared RemoteMg: every path to the camera manager, and Shift back in).
 			RemoteMg.LateSetup(vehicle);
 		}
 

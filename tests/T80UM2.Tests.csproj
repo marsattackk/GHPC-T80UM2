@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Tests for the parts of Common\ that don't need the game: the reticle language, MiniJson, dm_armour, the bundle
-       text numbers, the settings versions and the fire control and Shtora maths. The files are compiled in from
-       ..\Common, with Stubs\MelonLoader.cs in place of MelonLoader, so no game DLL is referenced and the T80UM2.dll
-       build is untouched. -->
+       text numbers, the settings versions, the fire control maths and the Drozd's engagement maths. The Shtora-1
+       jammer's sector is in there too, because the shared fire control test covers it, not because this tank has one.
+       The files are compiled in from ..\Common, with Stubs\MelonLoader.cs in place of MelonLoader, so no game DLL is
+       referenced and the T80UM2.dll build is untouched. -->
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>10</LangVersion>
     <Nullable>disable</Nullable>
     <IsPackable>false</IsPackable>
     <RootNamespace>T80UM2.Tests</RootNamespace>
@@ -28,6 +29,7 @@
     <Compile Include="..\Common\FcsMath.cs" Link="Common\FcsMath.cs" />
     <Compile Include="..\Common\ShtoraMath.cs" Link="Common\ShtoraMath.cs" />
     <Compile Include="..\Common\V3.cs" Link="Common\V3.cs" />
+    <Compile Include="..\Common\ActiveProtectionMath.cs" Link="Common\ActiveProtectionMath.cs" />
   </ItemGroup>
 
 </Project>

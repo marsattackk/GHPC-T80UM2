@@ -15,8 +15,12 @@ using System.Reflection;
 
 namespace T80UM2.Common
 {
+	// Hard-kill APS. A postfix on LiveRoundBatchHandler.Update sees every round once GHPC has moved it, and ApsMath
+	// makes the calls. Tube mouths and the radar origin are in turret frame, the protected box in the hull's.
 	internal static class Aps
 	{
+		internal const string GroundLaunchEvent = "event:/Weapons/launcher_smoke";
+
 		internal sealed class BlockSpec
 		{
 			public string Name;
@@ -26,6 +30,15 @@ namespace T80UM2.Common
 			public int Side;
 			public string Module;
 		}
+
+#pragma warning disable CS0649
+		internal sealed class SensorSpec
+		{
+			public string Name;
+			public string Module;
+			public float AzMin, AzMax;
+		}
+#pragma warning restore CS0649
 
 		internal sealed class Settings
 		{
@@ -37,6 +50,13 @@ namespace T80UM2.Common
 			public BlockSpec[] Blocks = new BlockSpec[0];
 			public int RoundsPerBlock = 2;
 			public string[] SensorModules = new string[0];
+			public SensorSpec[] Sensors = new SensorSpec[0];
+#pragma warning disable CS0649   // a port without radar sensors leaves it unset
+			public Vector3? RadarOrigin;
+#pragma warning restore CS0649
+			public string[] SideLabels = { "L", "R" };
+			public string[] SideNames = { "left side", "right side" };
+			public bool HudPerBlock = false;
 			public string ComputerModule;
 			public float ElMin = -6f, ElMax = 20f, SearchRange = 330f, TrackRange = 130f, MinRange = 11f;
 			public float SpeedMin = 70f, SpeedMax = 700f, SizeMin = 0.036f, ReactionTime = 0.02f;
@@ -48,7 +68,12 @@ namespace T80UM2.Common
 				ConeReach = 3f,
 				Cooldown = 0.35f,
 				OtherSide = 0.035f;
-			public bool PickTube;
+			public bool PickTube = false;
+			public bool PickOverlap = false;
+			public bool ClimbBurst = false;
+			public float BurstHeight = 0f;
+			public int RoundsPerThreat = 1;
+			public float RoundGap = 0.02f;
 			public string VisualPrefix;
 			public float ProtectMargin = 0f;
 			public float HeadingSmoothing = 0.15f;
@@ -67,21 +92,28 @@ namespace T80UM2.Common
 			internal Settings Copy() => (Settings)MemberwiseClone();
 		}
 
+		struct Motion
+		{
+			public int Id;
+			public Vector3 Prev;
+			public int PrevFrame;
+			public V3 Vel;
+			public bool HasVel;
+			public Vector3 Mean;
+			public bool HasMean;
+			public bool Ignored;
+			public int LastFrame;
+		}
+
 		internal sealed class Watched
 		{
 			public LiveRound Round;
 			public int Id;
 			public ApsMath.Track T = new ApsMath.Track();
-			public Vector3 Prev;
-			public int PrevFrame = -10;
-			public V3 Vel;
-			public bool HasVel;
-			public Vector3 Mean;
-			public bool HasMean;
-			public bool WindowLogged;
-			public Vector3 Mouth;
+			public Dictionary<ApsMath.Shot, (int tube, Vector3 mouth)> Tubes = new Dictionary<ApsMath.Shot, (int tube, Vector3 mouth)>();
 			public bool Launched;
-			public int Tube;
+			public bool Killed;
+			public V3 KillPoint;
 			public int LastFrame;
 		}
 
@@ -101,7 +133,9 @@ namespace T80UM2.Common
 			internal DC[] BlockDc, SensorDc;
 			internal DC ComputerDc;
 			internal Renderer[][] Caps;
+			internal Vector3[][] Mouths;
 			internal Bounds Box;
+			readonly Dictionary<LiveRound, Motion> _seen = new Dictionary<LiveRound, Motion>();
 			readonly Dictionary<LiveRound, Watched> _tracks = new Dictionary<LiveRound, Watched>();
 			readonly List<LiveRound> _gone = new List<LiveRound>();
 			bool _setUp, _modulesBound;
@@ -117,7 +151,14 @@ namespace T80UM2.Common
 				Turret = Followers.TurretBone(v);
 				if (Turret == null) return "no turret bone found: the APS stays off";
 				var root = v.transform;
-				Vector3 Local(Vector3 prefab) => Turret.InverseTransformPoint(root.TransformPoint(prefab));
+				// The port's points are for the turret at rest. A kit can go on at PlayerReady with the turret turned, so
+				// they go through the turret's rest pose, not where it points now.
+				var turretRest = TurretRest(v, Turret, out bool restKnown);
+				var restToWorld = (Turret.parent != null ? Turret.parent.localToWorldMatrix : Matrix4x4.identity)
+					* Matrix4x4.TRS(Turret.localPosition, turretRest, Turret.localScale);
+				var worldToRest = restToWorld.inverse;
+				Vector3 Local(Vector3 prefab) => worldToRest.MultiplyPoint3x4(root.TransformPoint(prefab));
+				Mouths = s.Blocks.Select(b => b.Mouths.Select(Local).ToArray()).ToArray();
 				G = new ApsMath.Geometry
 				{
 					ElMin = s.ElMin,
@@ -139,10 +180,18 @@ namespace T80UM2.Common
 					Cooldown = s.Cooldown,
 					OtherSide = s.OtherSide,
 					PickTube = s.PickTube,
-					Blocks = s.Blocks.Select(block =>
+					OverlapPick = s.PickOverlap,
+					ClimbBurst = s.ClimbBurst,
+					BurstHeight = s.BurstHeight,
+					RoundsPerThreat = Mathf.Max(1, s.RoundsPerThreat),
+					RoundGap = s.RoundGap,
+					Sensors = s.Sensors
+						.Select(x => new ApsMath.Sensor { Name = x.Name, AzMin = x.AzMin, AzMax = x.AzMax })
+						.ToArray(),
+					Blocks = s.Blocks.Select((block, blockIndex) =>
 					{
 						var center = Vector3.zero;
-						foreach (var mouth in block.Mouths) center += Local(mouth);
+						foreach (var mouth in Mouths[blockIndex]) center += mouth;
 						center /= Mathf.Max(1, block.Mouths.Length);
 						return new ApsMath.Block
 						{
@@ -161,10 +210,15 @@ namespace T80UM2.Common
 				foreach (var block in G.Blocks) origin += new Vector3(block.Mouth.x, block.Mouth.y, block.Mouth.z);
 				origin /= Mathf.Max(1, G.Blocks.Length);
 				G.Origin = new V3(0f, origin.y, origin.z);
+				if (s.RadarOrigin.HasValue)
+				{
+					var given = Local(s.RadarOrigin.Value);
+					G.Origin = new V3(given.x, given.y, given.z);
+				}
 				St = new ApsMath.State(G);
 				BlockDc = new DC[G.Blocks.Length];
-				SensorDc = new DC[2];
-				Box = OwnBox(v, s);
+				SensorDc = new DC[Mathf.Max(2, s.Sensors.Length)];
+				Box = OwnBox(v, s, Turret, restToWorld);
 				Caps = BindCaps(s, out var capNote);
 				if (s.OnAtSpawn)
 				{
@@ -174,26 +228,65 @@ namespace T80UM2.Common
 				Stations.Add(this);
 				EnsurePatched();
 				return $"{G.Blocks.Length} blocks ({string.Join("; ", G.Blocks.Select((b, i) => $"{b.Name} {b.AzMin:+0;-0}..{b.AzMax:+0;-0} deg, axis {b.AxisAz:+0;-0}, mouth {b.Mouth} turret frame, burst {b.Burst(G.InterceptRange)}, {St.Rounds[i]} rounds"))}), "
-					+ $"radar origin {G.Origin}, protected box {Box.center:F2} size {Box.size:F2} (vehicle frame; {_boxParts}), {(On ? "on at spawn" : "off at spawn")}, {capNote}";
+					+ $"radar origin {G.Origin}, protected box {Box.center:F2} size {Box.size:F2} (vehicle frame; {_boxParts}), {(On ? "on at spawn" : "off at spawn")}, {capNote}"
+					+ (restKnown ? "" : ", turret's rest pose unknown: taken as it points now");
 			}
 
-			static Bounds OwnBox(Vehicle v, Settings s)
+			static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> RestRotation =
+				Reflect.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
+
+			static Quaternion TurretRest(Vehicle v, Transform turret, out bool known)
+			{
+				known = RestRotation != null;
+				if (known)
+				{
+					foreach (var link in v.GetComponentsInChildren<TiltedRing.Link>(true))
+						if (link.Turret == turret && link.Platform != null)
+							return link.Tilt * RestRotation(link.Platform) * Quaternion.Inverse(link.Tilt);
+					foreach (var platform in v.GetComponentsInChildren<AimablePlatform>(true))
+						if (platform.Transform == turret)
+							return RestRotation(platform);
+				}
+				known = false;
+				return turret.localRotation;
+			}
+
+			static bool Shown(MeshRenderer renderer)
+			{
+				if (!renderer.gameObject.activeInHierarchy) return false;
+				if (renderer.enabled) return true;
+				foreach (string suffix in new[] { EraBricks.OpenSuffix, EraBricks.LidSuffix, EraBricks.SootSuffix })
+				{
+					if (!renderer.name.EndsWith(suffix, StringComparison.Ordinal) || renderer.transform.parent == null) continue;
+					var brick = renderer.transform.parent.Find(renderer.name.Substring(0, renderer.name.Length - suffix.Length));
+					return brick != null && brick.gameObject.activeInHierarchy;
+				}
+				return false;
+			}
+
+			static Bounds OwnBox(Vehicle v, Settings s, Transform turret, Matrix4x4 turretRest)
 			{
 				var root = v.transform;
 				var pts = new List<(Vector3 p, string n)>();
 				void Corners(Bounds localBounds, Transform part, string partName)
 				{
+					bool onTurret = part.IsChildOf(turret);
 					for (int i = 0; i < 8; i++)
-						pts.Add((root.InverseTransformPoint(part.TransformPoint(localBounds.center
+					{
+						var world = part.TransformPoint(localBounds.center
 							+ Vector3.Scale(
 								localBounds.extents,
-								new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1)))), partName));
+								new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1)));
+						if (onTurret) world = turretRest.MultiplyPoint3x4(turret.InverseTransformPoint(world));
+						pts.Add((root.InverseTransformPoint(world), partName));
+					}
 				}
 				string source = "armour colliders";
 				foreach (var collider in v.GetComponentsInChildren<Collider>(true))
 				{
 					if (collider == null
 						|| collider.isTrigger
+						|| !SwitchedOn(collider, root)
 						|| !collider.TryGetComponent<IArmor>(out _)
 						|| LeftOut(collider.transform, s.BoxLeaveOut))
 						continue;
@@ -221,6 +314,7 @@ namespace T80UM2.Common
 					{
 						if (s.VisualPrefix != null && !Under(renderer.transform, s.VisualPrefix)) continue;
 						if (LeftOut(renderer.transform, s.BoxLeaveOut)) continue;
+						if (!Shown(renderer)) continue;
 						var meshFilter = renderer.GetComponent<MeshFilter>();
 						if (meshFilter == null || meshFilter.sharedMesh == null) continue;
 						var meshBounds = meshFilter.sharedMesh.bounds;
@@ -256,6 +350,15 @@ namespace T80UM2.Common
 
 			static string _boxParts;
 
+			static bool SwitchedOn(Collider collider, Transform root)
+			{
+				if (!collider.enabled) return false;
+				for (var t = collider.transform; t != null && t != root; t = t.parent)
+					if (!t.gameObject.activeSelf)
+						return false;
+				return true;
+			}
+
 			static bool Under(Transform t, string prefix)
 			{
 				for (; t != null; t = t.parent) if (t.name.StartsWith(prefix)) return true;
@@ -274,7 +377,6 @@ namespace T80UM2.Common
 
 			Renderer[][] BindCaps(Settings s, out string note)
 			{
-				var root = Vehicle.transform;
 				var free = Vehicle.GetComponentsInChildren<MeshRenderer>(true)
 					.Where(r => r.name.StartsWith(s.CapPrefix))
 					.ToList();
@@ -287,7 +389,7 @@ namespace T80UM2.Common
 					all[i] = new Renderer[block.Mouths.Length];
 					for (int k = 0; k < block.Mouths.Length; k++)
 					{
-						var mouthPoint = root.TransformPoint(block.Mouths[k]);
+						var mouthPoint = Turret.TransformPoint(Mouths[i][k]);
 						var best = free.OrderBy(r => (r.transform.position - mouthPoint).sqrMagnitude).FirstOrDefault();
 						if (best == null || (best.transform.position - mouthPoint).magnitude > 0.15f) continue;
 						worst = Mathf.Max(worst, (best.transform.position - mouthPoint).magnitude);
@@ -330,8 +432,14 @@ namespace T80UM2.Common
 							BlockDc[i] = damageControl;
 							found.Add(module.Id);
 						}
-					for (int k = 0; k < S.SensorModules.Length && k < 2; k++)
+					for (int k = 0; k < S.SensorModules.Length && k < 2 && S.Sensors.Length == 0; k++)
 						if (S.SensorModules[k] != null && module.Id == S.SensorModules[k])
+						{
+							SensorDc[k] = damageControl;
+							found.Add(module.Id);
+						}
+					for (int k = 0; k < S.Sensors.Length; k++)
+						if (S.Sensors[k].Module != null && module.Id == S.Sensors[k].Module)
 						{
 							SensorDc[k] = damageControl;
 							found.Add(module.Id);
@@ -421,6 +529,13 @@ namespace T80UM2.Common
 						if (IsPlayer) MelonLogger.Msg($"{S.Name}: {G.Blocks[i].Name} launcher block destroyed.");
 						ShowCaps();
 					}
+				for (int k = 0; k < G.Sensors.Length; k++)
+					if (!St.SensorLost[k] && SensorDc[k] != null && SensorDc[k].IsDestroyed)
+					{
+						St.SensorLost[k] = true;
+						if (IsPlayer) MelonLogger.Msg($"{S.Name}: radar sensor {G.Sensors[k].Name} destroyed.");
+					}
+				BurstPending();
 				if (Reloading)
 				{
 					if (Vehicle.Neutralized)
@@ -449,6 +564,11 @@ namespace T80UM2.Common
 			{
 				int frame = Time.frameCount;
 				_gone.Clear();
+				foreach (var pair in _seen)
+					if (pair.Key == null || pair.Key.IsDestroyed || pair.Key.ID != pair.Value.Id || pair.Value.LastFrame < frame - 1)
+						_gone.Add(pair.Key);
+				foreach (var round in _gone) _seen.Remove(round);
+				_gone.Clear();
 				foreach (var pair in _tracks)
 					if (pair.Key == null || pair.Key.IsDestroyed || pair.Key.ID != pair.Value.Id || pair.Value.LastFrame < frame - 1)
 						_gone.Add(pair.Key);
@@ -460,111 +580,173 @@ namespace T80UM2.Common
 				if (Turret == null || r.Shooter == Vehicle) return;
 				var center = Turret.position;
 				if ((pos - center).sqrMagnitude > S.SearchRange * S.SearchRange) return;
-				if (!_tracks.TryGetValue(r, out var watched) || watched.Id != r.ID)
+				if (!_seen.TryGetValue(r, out var motion) || motion.Id != r.ID) motion = new Motion { Id = r.ID, PrevFrame = -10 };
+				if (_tracks.TryGetValue(r, out var watched) && watched.Id != r.ID)
 				{
-					watched = new Watched { Round = r, Id = r.ID };
-					_tracks[r] = watched;
+					_tracks.Remove(r);
+					watched = null;
 				}
 				int frame = Time.frameCount;
 				var forwardVelocity = r.transform.forward * (r.CurrentSpeed > 1f
 					? r.CurrentSpeed
 					: (r.Info != null ? r.Info.MuzzleVelocity : 0f));
-				var movement = pos - watched.Prev;
+				var movement = pos - motion.Prev;
 				var frameVelocity = ApsMath.FrameVelocity(
-					watched.PrevFrame == frame - 1,
+					motion.PrevFrame == frame - 1,
 					new V3(movement.x, movement.y, movement.z),
 					dt,
-					watched.HasVel,
-					watched.Vel,
+					motion.HasVel,
+					motion.Vel,
 					new V3(forwardVelocity.x, forwardVelocity.y, forwardVelocity.z));
 				Vector3 vel = new Vector3(frameVelocity.x, frameVelocity.y, frameVelocity.z);
-				watched.Vel = frameVelocity;
-				watched.HasVel = true;
-				watched.Prev = pos;
-				watched.PrevFrame = frame;
-				watched.LastFrame = frame;
-				if (watched.T.Done) return;
+				motion.Vel = frameVelocity;
+				motion.HasVel = true;
+				motion.Prev = pos;
+				motion.PrevFrame = frame;
+				motion.LastFrame = frame;
+				if (watched != null) watched.LastFrame = frame;
+				if (motion.Ignored || (watched != null && watched.T.Done))
+				{
+					_seen[r] = motion;
+					return;
+				}
 				var turretPoint = Turret.InverseTransformPoint(pos);
 				var turretVelocity = Turret.InverseTransformDirection(vel);
 				var localPoint = new V3(turretPoint.x, turretPoint.y, turretPoint.z);
 				var localVelocity = new V3(turretVelocity.x, turretVelocity.y, turretVelocity.z);
 				var root = Vehicle.transform;
-				if (!watched.HasMean)
+				if (!motion.HasMean)
 				{
-					watched.Mean = vel;
-					watched.HasMean = true;
+					motion.Mean = vel;
+					motion.HasMean = true;
 				}
-				else watched.Mean += (vel - watched.Mean) * (1f - Mathf.Exp(-dt / Mathf.Max(1e-3f, S.HeadingSmoothing)));
+				else motion.Mean += (vel - motion.Mean) * (1f - Mathf.Exp(-dt / Mathf.Max(1e-3f, S.HeadingSmoothing)));
 				var hullPoint = root.InverseTransformPoint(pos);
-				var hullDirection = root.InverseTransformDirection(watched.Mean.normalized);
+				var hullDirection = root.InverseTransformDirection(motion.Mean.normalized);
 				bool atBox = ApsMath.RayHitsBox(
 					new V3(hullPoint.x, hullPoint.y, hullPoint.z),
 					new V3(hullDirection.x, hullDirection.y, hullDirection.z),
 					new V3(Box.center.x, Box.center.y, Box.center.z),
 					new V3(Box.extents.x, Box.extents.y, Box.extents.z));
 				float diameter = r.Info != null ? ApsMath.Diameter(r.Info.SectionalArea) : 0f;
-				string window = ApsMath.Window(G, vel.magnitude, diameter, r.IsSpall);
-				if (window != null)
+				if (!ApsMath.InWindow(G, vel.magnitude, diameter, r.IsSpall))
 				{
-					if (!watched.WindowLogged && atBox && (localPoint - G.Origin).Length <= G.TrackRange)
+					if (atBox && (localPoint - G.Origin).Length <= G.TrackRange)
 					{
-						watched.WindowLogged = true;
-						watched.T.Done = true;
-						watched.T.Why = $"ignored ({window})";
-						Report(r, watched, vel.magnitude, diameter, localPoint);
+						motion.Ignored = true;
+						if (watched != null) watched.T.Done = true;
 					}
+					_seen[r] = motion;
 					return;
+				}
+				_seen[r] = motion;
+				if (watched == null)
+				{
+					watched = new Watched { Round = r, Id = r.ID, LastFrame = frame };
+					_tracks[r] = watched;
 				}
 				if (!watched.T.Committed && Claimed(r, Key))
 				{
 					watched.T.Done = true;
 					watched.T.Why = "left to another station that engages it";
-					Report(r, watched, vel.magnitude, diameter, localPoint);
+					Report(r, watched.T, vel.magnitude, diameter, localPoint);
 					return;
 				}
 				string ready = NotReady();
-				if (ready == null && G.Blocks.Length > 0)
+				if (ready == null && G.Blocks.Length > 0 && G.Sensors.Length == 0)
 				{
 					float azimuth = (localPoint - G.Origin).Az;
 					int side = azimuth < 0f ? 0 : 1;
 					if (SensorDc[side] != null && SensorDc[side].IsDestroyed)
 						ready = $"the {(side == 0 ? "left" : "right")} radar head lost";
 				}
-				var result = ApsMath.Step(G, St, watched.T, localPoint, localVelocity, atBox, now, dt, ready);
-				if (result.Fired) Launch(r, watched);
-				if (result.Act == ApsMath.Act.Intercept) Burst(r, watched, result, vel);
-				else if (result.Act == ApsMath.Act.Drop) Report(r, watched, vel.magnitude, diameter, localPoint);
+				ApsMath.Result result;
+				// One burst per Step. Several rounds at one threat can all be due in the same frame.
+				do
+				{
+					result = ApsMath.Step(G, St, watched.T, localPoint, localVelocity, atBox, now, dt, ready);
+					if (result.Fired) Launch(r, watched, result);
+					if (result.Act == ApsMath.Act.Intercept)
+					{
+						if (watched.Killed) BurstOnNothing(watched, result.Shot, result.Hit);
+						else Burst(r, watched, result, vel);
+					}
+					else if (result.Act == ApsMath.Act.Drop) Report(r, watched.T, vel.magnitude, diameter, localPoint);
+				}
+				while (result.More);
+				if (watched.Killed && !watched.T.Done) HandOver(watched);
 			}
 
-			void Launch(LiveRound r, Watched w)
+			readonly List<(Watched watched, ApsMath.Shot shot)> _pending = new List<(Watched, ApsMath.Shot)>();
+
+			void HandOver(Watched w)
 			{
-				int blockIndex = w.T.Block;
-				Claim(r, Key);
-				Fired++;
-				var spec = S.Blocks[blockIndex];
-				int tube = Mathf.Clamp(St.Rounds[blockIndex], 0, spec.Mouths.Length - 1);
-				var mouth = Vehicle.transform.TransformPoint(spec.Mouths[tube]);
-				w.Mouth = spec.Mouths[tube];
-				w.Launched = true;
-				w.Tube = tube + 1;
-				if (Caps != null && Caps[blockIndex][tube] != null) Caps[blockIndex][tube].enabled = false;
-				Blast.Play(mouth, Blast.Size.ApsLaunch, false);
-				try { GHPC.Audio.FmodGenericAudioManager.PlayOneShot(S.LaunchEvent, mouth); }
-				catch (Exception exception)
+				foreach (var shot in w.T.Shots)
+					if (!shot.Burst)
+						_pending.Add((w, shot));
+				w.T.Done = true;
+			}
+
+			void BurstPending()
+			{
+				for (int i = _pending.Count - 1; i >= 0; i--)
 				{
-					DonorParts.WarnOnce("aps launch sound", $"{S.Tag}: launch sound '{S.LaunchEvent}' failed: {exception.Message}");
+					var (watched, shot) = _pending[i];
+					if (Time.time < shot.BurstAt) continue;
+					_pending.RemoveAt(i);
+					BurstOnNothing(watched, shot, watched.KillPoint);
 				}
-				w.T.Why = $"block {G.Blocks[blockIndex].Name} tube {tube + 1} fired";
+			}
+
+			void BurstOnNothing(Watched w, ApsMath.Shot shot, V3 threat)
+			{
+				shot.Burst = true;
+				var burstWorld = Turret.TransformPoint(new Vector3(shot.BurstPoint.x, shot.BurstPoint.y, shot.BurstPoint.z));
+				var axis = G.ClimbBurst ? (threat - shot.BurstPoint).Normalized : shot.Axis;
+				var axisWorld = Turret.TransformDirection(new Vector3(axis.x, axis.y, axis.z));
+				Blast.Play(burstWorld, Blast.Size.ApsBurst);
+				int frags = Fragments(burstWorld, axisWorld);
+			}
+
+			void Launch(LiveRound r, Watched w, ApsMath.Result res)
+			{
+				Claim(r, Key);
+				for (int index = res.FirstShot; index < res.FirstShot + res.ShotCount; index++)
+				{
+					var shot = w.T.Shots[index];
+					int blockIndex = shot.Block;
+					Fired++;
+					var spec = S.Blocks[blockIndex];
+					int laterOnes = 0;
+					for (int later = index + 1; later < res.FirstShot + res.ShotCount; later++)
+						if (w.T.Shots[later].Block == blockIndex)
+							laterOnes++;
+					int tube = Mathf.Clamp(St.Rounds[blockIndex] + laterOnes, 0, spec.Mouths.Length - 1);
+					var mouth = Turret.TransformPoint(Mouths[blockIndex][tube]);
+					w.Tubes[shot] = (tube + 1, Mouths[blockIndex][tube]);
+					w.Launched = true;
+					if (Caps != null && Caps[blockIndex][tube] != null) Caps[blockIndex][tube].enabled = false;
+					Blast.Play(mouth, Blast.Size.ApsLaunch, false);
+					try { GHPC.Audio.FmodGenericAudioManager.PlayOneShot(S.LaunchEvent, mouth); }
+					catch (Exception exception)
+					{
+						DonorParts.WarnOnce("aps launch sound", $"{S.Tag}: launch sound '{S.LaunchEvent}' failed: {exception.Message}");
+					}
+					string fired = $"block {G.Blocks[blockIndex].Name} tube {tube + 1} fired";
+					w.T.Why = index == res.FirstShot && res.FirstShot == 0 ? fired : $"{w.T.Why}; {fired}";
+				}
 			}
 
 			void Burst(LiveRound r, Watched w, ApsMath.Result res, Vector3 vel)
 			{
-				int blockIndex = w.T.Block;
-				var blk = G.Blocks[blockIndex];
-				var burstPoint = w.T.BurstPoint;
+				var shotNow = res.Shot;
+				var blk = G.Blocks[shotNow.Block];
+				var burstPoint = shotNow.BurstPoint;
+				int roundNumber = w.T.Shots.IndexOf(shotNow) + 1;
+				string burstText = roundNumber > 1 ? $"; round {roundNumber}: burst" : ", burst";
 				var burstWorld = Turret.TransformPoint(new Vector3(burstPoint.x, burstPoint.y, burstPoint.z));
 				var hitWorld = Turret.TransformPoint(new Vector3(res.Hit.x, res.Hit.y, res.Hit.z));
-				var axisWorld = Turret.TransformDirection(new Vector3(blk.Axis.x, blk.Axis.y, blk.Axis.z));
+				var axisWorld = Turret.TransformDirection(new Vector3(res.Axis.x, res.Axis.y, res.Axis.z));
 				var from = r.transform.position;
 				var seg = hitWorld - from;
 				if (seg.sqrMagnitude > 1e-6f
@@ -572,22 +754,22 @@ namespace T80UM2.Common
 					&& !OwnCollider(block.collider))
 				{
 					var owner = block.collider.GetComponentInParent<Unit>();
-					w.T.Why = $"{w.T.Why}; burst, but {block.collider.name}{(owner != null ? $" (of {owner.name})" : "")} at {Vehicle.transform.InverseTransformPoint(block.point):F1} (unit frame) between the threat and the burst point: no effect";
+					w.T.Why = $"{w.T.Why}{(roundNumber > 1 ? $"; round {roundNumber}" : "")}; burst, but {block.collider.name}{(owner != null ? $" (of {owner.name})" : "")} at {Vehicle.transform.InverseTransformPoint(block.point):F1} (unit frame) between the threat and the burst point: no effect";
 					Blast.Play(burstWorld, Blast.Size.ApsBurst);
 					Fragments(burstWorld, axisWorld);
-					r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w)}: {block.collider.name} in the way, no effect");
-					RecapLines(r, w, burstWorld, axisWorld, null);
-					Report(r, w, vel.magnitude, r.Info != null ? ApsMath.Diameter(r.Info.SectionalArea) : 0f, res.Hit);
+					r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w, shotNow)}: {block.collider.name} in the way, no effect");
+					RecapLines(r, w, shotNow, burstWorld, axisWorld, null);
+					ReportWhenDone(r, w, vel.magnitude, res.Hit);
 					return;
 				}
 				Blast.Play(burstWorld, Blast.Size.ApsBurst);
 				int frags = Fragments(burstWorld, axisWorld);
 				if (!res.InField)
 				{
-					r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w)}: missed by {res.Miss:0.0} m, outside the fragments, not destroyed");
-					RecapLines(r, w, burstWorld, axisWorld, null);
-					w.T.Why = $"{w.T.Why}, burst {w.T.BurstRange:0.0} m out, the threat {res.Miss:0.0} m from it, outside the fragment field: no effect; frags {frags}";
-					Report(r, w, vel.magnitude, r.Info != null ? ApsMath.Diameter(r.Info.SectionalArea) : 0f, res.Hit);
+					r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w, shotNow)}: missed by {res.Miss:0.0} m, outside the fragments, not destroyed");
+					RecapLines(r, w, shotNow, burstWorld, axisWorld, null);
+					w.T.Why = $"{w.T.Why}{burstText} {shotNow.BurstRange:0.0} m out, the threat {res.Miss:0.0} m from it, outside the fragment field: no effect; frags {frags}";
+					ReportWhenDone(r, w, vel.magnitude, res.Hit);
 					return;
 				}
 				var cls = ClassOf(r);
@@ -595,14 +777,17 @@ namespace T80UM2.Common
 				float draw = ModRandom.Value;
 				bool kill = ApsMath.Kills(killChance, draw);
 				string fate;
-				r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w)}: fragments hit it {res.Miss:0.0} m from the burst");
-				RecapLines(r, w, burstWorld, axisWorld, hitWorld);
+				r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w, shotNow)}: fragments hit it {res.Miss:0.0} m from the burst");
+				RecapLines(r, w, shotNow, burstWorld, axisWorld, hitWorld);
 				if (kill)
 				{
 					Intercepts++;
+					w.Killed = true;
+					w.KillPoint = res.Hit;
 					r.transform.position = hitWorld;
 					float draw2 = ModRandom.Value;
-					bool broken = ApsMath.BrokenUp(S.PBrokenUp, draw2);
+					// _armed and _failedToDetonate are read by name. If either is gone the round still gets its Detonate.
+					bool broken = ApsMath.BrokenUp(S.PBrokenUp, draw2) && FailedToDetonate != null;
 					if (broken)
 					{
 						FailedToDetonate(r) = true;
@@ -612,7 +797,7 @@ namespace T80UM2.Common
 					}
 					else
 					{
-						Armed(r) = true;
+						if (Armed != null) Armed(r) = true;
 						r.Story?.TryAddStoryEvent($"Intercepted by {S.Name} ({blk.Name} block)");
 						var info = r.Info;
 						if (Explode != null && info != null)
@@ -641,10 +826,15 @@ namespace T80UM2.Common
 				if (shooter != null && shooter.Allegiance != Vehicle.Allegiance)
 					try { Vehicle.NotifyStruck(shooter, r.Info, hitWorld); }
 					catch (Exception exception) { PatchGuard.Failed($"{S.Tag} AI notice", exception); }
-				w.T.Why = $"{w.T.Why}, burst {w.T.BurstRange:0.0} m out, threat hit {res.Miss:0.0} m from it (put {res.Moved:0.00} m ahead) -> {fate} (P {killChance:0.00}); frags {frags} in +-{S.FragConeHalf:0} deg";
-				Report(r, w, vel.magnitude, r.Info != null ? ApsMath.Diameter(r.Info.SectionalArea) : 0f, res.Hit);
+				w.T.Why = $"{w.T.Why}{burstText} {shotNow.BurstRange:0.0} m out, threat hit {res.Miss:0.0} m from it (put {res.Moved:0.00} m ahead) -> {fate} (P {killChance:0.00}); frags {frags} in +-{S.FragConeHalf:0} deg";
+				ReportWhenDone(r, w, vel.magnitude, res.Hit);
 				if (IsPlayer)
-					MelonLogger.Msg($"{S.Name}: {(kill ? "intercepted" : "engaged")} {r.Info?.Name ?? "a round"} ({blk.Name} block){(kill ? "" : ", not destroyed")}; {St.SideRounds(G, blk.Side)} round(s) left on the {(blk.Side == 0 ? "left" : "right")} side.");
+					MelonLogger.Msg($"{S.Name}: {(kill ? "intercepted" : "engaged")} {r.Info?.Name ?? "a round"} ({blk.Name} block){(kill ? "" : ", not destroyed")}; {St.SideRounds(G, blk.Side)} round(s) left on the {SideName(blk.Side)}.");
+			}
+
+			void ReportWhenDone(LiveRound r, Watched w, float speed, V3 at)
+			{
+				if (w.Killed || w.T.Done) Report(r, w.T, speed, r.Info != null ? ApsMath.Diameter(r.Info.SectionalArea) : 0f, at);
 			}
 
 			void InRecap(LiveRound r, Vector3 at)
@@ -685,7 +875,7 @@ namespace T80UM2.Common
 			}
 
 			const int RecapFan = 10;
-			void RecapLines(LiveRound r, Watched w, Vector3 burst, Vector3 axis, Vector3? caught)
+			void RecapLines(LiveRound r, Watched w, ApsMath.Shot shot, Vector3 burst, Vector3 axis, Vector3? caught)
 			{
 				try
 				{
@@ -693,7 +883,8 @@ namespace T80UM2.Common
 					var shotInfo = r.ShotInfo;
 					if (aar == null || shotInfo == null || !w.Launched) return;
 					var parent = shotInfo.ParentShot ?? shotInfo;
-					Line(aar, parent, Vehicle.transform.TransformPoint(w.Mouth), burst, 20f);
+					if (w.Tubes.TryGetValue(shot, out var tube))
+						Line(aar, parent, Turret.TransformPoint(tube.mouth), burst, 20f);
 					if (caught.HasValue) Line(aar, parent, burst, caught.Value, 12f);
 					var right = Vector3.Cross(Vector3.up, axis);
 					right = right.sqrMagnitude > 1e-6f ? right.normalized : Turret.right;
@@ -728,7 +919,8 @@ namespace T80UM2.Common
 				aar.AddShot(shot);
 			}
 
-			string Engaged(string block, Watched w) => $"{S.Name} {block} block, tube {w.Tube}: burst {w.T.BurstRange:0.0} m out";
+			string Engaged(string block, Watched w, ApsMath.Shot shot)
+				=> $"{S.Name} {block} block, tube {(w.Tubes.TryGetValue(shot, out var tube) ? tube.tube : 0)}: burst {shot.BurstRange:0.0} m out";
 
 			bool OwnCollider(Collider c)
 				=> c.GetComponentInParent<Unit>() == Vehicle || (c.TryGetComponent<IArmor>(out var armor) && armor.Unit == (IUnit)Vehicle);
@@ -758,16 +950,8 @@ namespace T80UM2.Common
 					? S.PAtgm
 					: t == ApsMath.Threat.Grenade ? S.PGrenade : t == ApsMath.Threat.Heat ? S.PHeat : t == ApsMath.Threat.He ? S.PHe : 0f;
 
-			void Report(LiveRound r, Watched w, float speed, float diameter, V3 p)
+			void Report(LiveRound r, ApsMath.Track t, float speed, float diameter, V3 p)
 			{
-				var rel = p - G.Origin;
-				var who = r.Shooter != null
-					? $"{r.Shooter.name}{(r.Shooter.Allegiance == Vehicle.Allegiance ? " (friendly)" : "")}"
-					: "no shooter";
-				string line = $"{S.Tag} round {r.ID} '{r.Info?.Name}' {ApsMath.Name(ClassOf(r))} {speed:0} m/s d={diameter:0.000} m bearing {rel.Az:+0.0;-0.0} el {rel.El:+0.0;-0.0} (turret) at {rel.Length:0.0} m"
-					+ (w.T.Seen
-						? $": tracked at {w.T.SeenRange:0.0} m, track {Time.time - w.T.SeenAt:0.000} s"
-						: "") + $": {w.T.Why}; from {who}; rounds left L {St.SideRounds(G, 0)} R {St.SideRounds(G, 1)}.";
 			}
 
 			internal string HudLine()
@@ -778,8 +962,19 @@ namespace T80UM2.Common
 						? $"reloading, {ReloadLeft:0} s ({Empty} to load)"
 						: $"reloading: stop the tank ({Empty} to load)")
 					: why;
-				return $"{S.Name}: L {St.SideRounds(G, 0)} R {St.SideRounds(G, 1)}, {state}";
+				string line = $"{S.Name}: {SideSummary()}, {state}";
+				if (S.HudPerBlock && G.Sensors.Length > 0) line += $"\n{S.Name} radars: {ApsMath.RadarSummary(G, St)}";
+				return line;
 			}
+
+			string SideLabel(int side) => side < S.SideLabels.Length ? S.SideLabels[side] : $"S{side + 1}";
+
+			string SideName(int side) => side < S.SideNames.Length ? S.SideNames[side] : $"side {side + 1}";
+
+			string SideSummary()
+				=> S.HudPerBlock
+					? ApsMath.BlockSummary(G, St)
+					: string.Join(" ", Enumerable.Range(0, St.SideFired.Length).Select(s => $"{SideLabel(s)} {St.SideRounds(G, s)}"));
 		}
 
 		static readonly AccessTools.FieldRef<LiveRound, bool> Armed = Reflect.FieldRefAccess<LiveRound, bool>("_armed");
@@ -815,13 +1010,16 @@ namespace T80UM2.Common
 
 		internal static string HudName(Unit u) => Of(u)?.S.Name;
 
+		// Lives in AppDomain data for every mod with an APS. mscorlib types only, since no mod's own type matches another's,
+		// and a new layout means a new key.
 		static Dictionary<long, int> _claims;
 		static Dictionary<long, int> ClaimsTable
 		{
 			get
 			{
 				if (_claims != null) return _claims;
-				const string key = "T80UM2.Common.Aps.Claims.v1";
+				// GHPCMods, not this mod's namespace: every tank's copy has to find the one table.
+				const string key = "GHPCMods.Aps.Claims.v1";
 				var had = AppDomain.CurrentDomain.GetData(key);
 				if (had is Dictionary<long, int> table) _claims = table;
 				else
@@ -852,7 +1050,7 @@ namespace T80UM2.Common
 		static readonly AccessTools.FieldRef<LiveRoundBatchHandler, List<LiveRound>> LiveRounds =
 			Reflect.FieldRefAccess<LiveRoundBatchHandler, List<LiveRound>>("_liveRounds");
 
-		// Not [HarmonyPatch]: every port compiles this file; only a port with an APS patches anything.
+		// Not [HarmonyPatch]: every port compiles this file, but only a port with an APS patches anything.
 		static void EnsurePatched()
 		{
 			if (_patched) return;

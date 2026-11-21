@@ -94,7 +94,7 @@ Plain olive as in the Kubinka photos, with the olive canvas cover on the mantlet
 | Turret traverse / gun elevation | 25°/s / 25°/s |
 | Gun | 2А46М-1, -5° / +14° over the front, -4° over the engine deck |
 | Autoloader | 7.1 s for every round, 28 in the carousel |
-| Main gun ammo | 40 rounds: 3BM42, 3BM59 or 3BM60, 3BK18M HEAT, 3OF26 HE-Frag, 9M119M Invar |
+| Main gun ammo | 40 rounds: 3BM42, 3BM59 or 3BM60, 3BK29M, 3BK31 or 3BK18M HEAT, 3OF26 HE-Frag, 9M119M Invar |
 | Coax ПКТ | 1250 rounds (5 belts of 250) |
 | НСВТ | 450 rounds, 740 rounds a minute, -5° / +30°, by hand |
 | Smoke | 8 × 902Б «Туча», 3Д17 aerosol grenades, no spares |
@@ -107,6 +107,8 @@ Plain olive as in the Kubinka photos, with the olive canvas cover on the mantlet
 | 3BM59 «Свинец-1» | about 600 mm at the muzzle |
 | 3BM60 «Свинец-2» | about 690 mm at the muzzle, about 600 mm at 2 km |
 | 9M119M «Инвар» | 700 mm, tandem warhead (sets off ERA first) |
+| 3BK29M HEAT (default) | 700 mm guaranteed, 915 m/s, 18.4 kg. NII Stali's people wrote in 2019 that it was only ever meant for add-on ERA, so Kontakt-5 counts in full against it. Behind add-on ERA it keeps 650 mm, which is my reading of an unlabelled figure in its data table |
+| 3BK31 «Старт-2» HEAT | 800 mm, 660 behind built-in and 680 behind add-on ERA. Never adopted, so the campaign doesn't roll it. Its 905 m/s is a guess off its direct-fire range, which is 3BK18M's within 10 m. The two main charges fire as two jets, the first with a third of the penetration and the second with all of it beside it. Both figures are guesses, nobody publishes the split |
 | 3BK18M HEAT, 3OF26 HE-Frag | the game's own rounds |
 
 | «Дрозд» | |

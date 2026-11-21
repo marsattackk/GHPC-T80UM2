@@ -7,11 +7,11 @@ using UnityEngine;
 namespace T80UM2
 {
 	// The gunner's «Агава-2» thermal (Т01-П02Т) on the TPN-3-49's slot, through the shared ThermalSight (as the T-90A's ESSA).
-	// Inferred on the UM2: its photos show the «Буран-ПА» box, the «Агава-2» was the T-80УМ's / УК's. A 128-element КРТ linear
-	// array, 8-12 µm, its picture on a 110 mm CRT monitor («Агава-2», odetievbrony.ru, pp. 6143-6144). It sits on the 1Г46's
-	// line of sight, with two fields, a 288-line picture on a 4:3 monitor, white-hot with the polarity switch («переключатели
-	// «белый/чёрный»», the same description), the day channel's shake; the fire gate stays on the gun's own lay (GunnerFcs).
-	// Every mark is a screen item, so the reticle mesh is off.
+	// Inferred on the UM2. Its photos show the «Буран-ПА» box, and the «Агава-2» was the T-80УМ's / УК's. A 128-element
+	// КРТ linear array, 8-12 µm, its picture on a 110 mm CRT monitor («Агава-2», odetievbrony.ru, pp. 6143-6144). It sits on
+	// the 1Г46's line of sight, with two fields, a 288-line picture on a 4:3 monitor, white-hot with the polarity switch
+	// («переключатели «белый/чёрный»», the same description) and the day channel's shake. The fire gate stays on the gun's
+	// own lay (GunnerFcs). Every mark is a screen item, so the reticle mesh is off.
 	internal static partial class Sights
 	{
 		// «при кратности увеличения 5,5х 4x2,7°; при кратности увеличения 11х 2x1,35°» («Агава-2», odetievbrony.ru)
@@ -45,7 +45,7 @@ namespace T80UM2
 					if (optic.reticleMesh != null) optic.reticleMesh.gameObject.SetActive(false);
 				},
 				Readout = optic => bound = AgavaMonitor(optic, problems),
-				// A TV picture on a CRT («телевизионный монитор с диагональю 110 мм», «ЭЛТ-монитора»; «Агава-2», pp. 6143-6144)
+				// A TV picture on a CRT («телевизионный монитор с диагональю 110 мм», «ЭЛТ-монитора», in «Агава-2», pp. 6143-6144)
 				Monitor = true,
 				Crt = true,
 			});

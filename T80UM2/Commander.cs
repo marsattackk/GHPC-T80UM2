@@ -47,7 +47,6 @@ namespace T80UM2
 		// (x 1.05) runs up to it. The case leaves just ahead of that corner, mouth first, pushed out slowly, a little right and
 		// down, and falls on the turret roof. Place, direction and speed are my guess (the source gives the direction, not the
 		// window's size or the speed).
-		// The НСВ throws its cases forward out of the receiver's front right, not to the side.
 		internal static readonly Vector3 CaseChute = new Vector3(1.015f, 2.525f, -0.26f);
 		internal static readonly Vector3 CaseChuteDir = new Vector3(0.25f, -0.1f, 1f);
 		const float CaseSpeed = 1.5f, CaseSpread = 4f;
@@ -57,7 +56,6 @@ namespace T80UM2
 		// z -0.67..-0.44), each round centred on the tray (z -0.56: the round's centre, its base at z -0.63). The rounds are the
 		// T-90A's: one round of its War Thunder Kord belt with its link (same 12.7x108 cartridge, same link family), at that
 		// belt's link pitch of 2.97 cm. Points and directions are my guess from the model.
-		// The box's lid is shut, so the belt comes out through its gun-side wall just under the lid and runs straight across.
 		static readonly Vector3 BeltFeed = new Vector3(1.05f, 2.600f, -0.56f), BeltFeedDir = new Vector3(1f, 0f, 0f);
 		static readonly Vector3 BeltMouth = new Vector3(1.135f, 2.612f, -0.56f), BeltMouthDir = new Vector3(-1f, 0f, 0f);
 		const float BeltPitch = 0.0297f;
@@ -67,10 +65,10 @@ namespace T80UM2
 			MeshName = "T80UM2 NSVT",
 			SpareRounds = 14,
 		};
-		// The mount's own controls (no spade grips; «Техническое описание танка Т-80Б»: «рукоятка горизонтального наведения,
-		// маховик вертикального наведения»), where War Thunder models them: the traverse handle low on the left of the pedestal
-		// head (its grip x 0.70..0.81), turning with the pedestal; the handwheel's D-handle at the end of its bar behind the
-		// magazine (x 1.29..1.31), going up and down with the gun.
+		// The mount's own controls (no spade grips: «рукоятка горизонтального наведения, маховик вертикального наведения»,
+		// «Техническое описание танка Т-80Б»), where War Thunder models them. The traverse handle sits low on the left of the
+		// pedestal head (its grip x 0.70..0.81) and turns with the pedestal. The handwheel's D-handle is at the end of its bar
+		// behind the magazine (x 1.29..1.31) and goes up and down with the gun.
 		static readonly Vector3 LeftGrip = new Vector3(0.755f, 2.325f, -0.795f), RightGrip = new Vector3(1.30f, 2.385f, -0.74f);
 		// For a commander outside the hatch, which this tank does not do (switched off: Climbs).
 		// Sitting on the roof behind the gun: his hips right of the cupola, in front of the open lid, 10 cm over the roof (2.0
@@ -98,7 +96,7 @@ namespace T80UM2
 
 		// The belt's round: one round of the T-90A's War Thunder Kord belt (embedded as kord_belt_round.bin) on its own War
 		// Thunder maps (the T-90A's mg_6p49_kord_ammo albedo, normal and metal), drawn as the bundle's small arms are (Standard
-		// (FLIR): warm in the thermal sights with the tank). Read once; nulls (and the drawn round) when a resource is missing.
+		// (FLIR): warm in the thermal sights with the tank). Read once. Nulls (and the drawn round) when a resource is missing.
 		static BeltRound.Data _round;
 		static Material _roundMat;
 		static (BeltRound.Data, Material, string) BeltRoundFromResources()
@@ -161,8 +159,7 @@ namespace T80UM2
 		internal static void Apply(Vehicle vehicle)
 		{
 			DevFitting(vehicle);
-			try { FitStation(vehicle); }
-			catch (System.Exception exception) { MelonLogger.Error($"{Tag} NSVT: {exception}"); }
+			FitStation(vehicle);
 		}
 
 		static void FitStation(Vehicle vehicle)
@@ -174,7 +171,7 @@ namespace T80UM2
 			var verticalMount = MountOf("NSVT_V");
 			if (horizontalMount == null || verticalMount == null)
 			{
-				MelonLogger.Warning($"{Tag}: the bundle has no НСВТ mounts (old bundle?); the НСВТ stays fixed and unarmed.");
+				MelonLogger.Warning($"{Tag}: the rig map has no НСВТ mounts; the НСВТ stays fixed and unarmed.");
 				return;
 			}
 			var donor = Donor.Get(Tag);
@@ -211,7 +208,7 @@ namespace T80UM2
 				ToWorld(verticalMount.Pivot),
 				root.rotation * Quaternion.FromToRotation(Vector3.right, verticalMount.Axis.normalized));
 			Transform Carrier(string group) => group == horizontalMount.Group ? frame : group == verticalMount.Group ? cradleT : null;
-			// The model's cradle and gun carry the turret's 1.5 deg nose-down pitch, GHPC lays the cradle level.
+			// The model's cradle and gun carry the turret's 1.5 deg nose-down pitch, but GHPC lays the cradle level.
 			float pitch = rig.HasAxes ? rig.PitchDeg : 0f;
 			Transform cradleVis = null;
 			foreach (var mount in rig.Mounts)
@@ -254,7 +251,7 @@ namespace T80UM2
 			if (donorBox > 0f)
 			{
 				foreach (var stage in gun.Feed.ClipReloadStages)
-					StageDuration.SetValue(stage, (float)StageDuration.GetValue(stage) * BoxChangeSeconds / donorBox);
+					StageDuration?.SetValue(stage,(float)StageDuration.GetValue(stage) * BoxChangeSeconds / donorBox);
 			}
 			var (fcsGo, fcs, sightGo, _, _) = RemoteMg.CloneFcs(donor, holder.transform, "T80UM2 NSVT fire control");
 			var eye = new GameObject("T80UM2 K10-T eye").transform;
@@ -264,7 +261,7 @@ namespace T80UM2
 				+ Quaternion.AngleAxis(-pitch, cradleT.right) * (ToWorld(K10Window.ReflectorWt) - cradleT.position);
 			eye.SetPositionAndRotation(reflector - cradleT.forward * K10Window.EyeRelief, cradleT.rotation);
 			var windowNotes = new List<string>();
-			// The window and the clean sight body in the sight-axis frame, the plate levelled; the model's holder out of the view.
+			// The window and the clean sight body in the sight-axis frame, the plate levelled and the model's holder out of the view.
 			K10Window.Build(
 				cradleT,
 				reflector,
@@ -391,7 +388,6 @@ namespace T80UM2
 					new[] { turret, turret.parent });
 			}
 
-			// The vehicle's lists.
 			var info = new WeaponSystemInfo { Name = GunName, Role = WeaponSystemRole.RoofGun, Weapon = gun.Weapon, FCS = fcs };
 			var station = scripts.AddComponent<Station>();
 			station.Info = info;
@@ -408,7 +404,7 @@ namespace T80UM2
 			ByWeapon[gun.Weapon] = station;
 			UnityKeys.Prune(ByWeapon);
 
-			// His seat on the roof behind the gun (turns with the pedestal) and the climb.
+			// His seat on the roof behind the gun (turns with the pedestal) and the climb, both idle while Climbs is off.
 			var seat = new GameObject("T80UM2 NSVT commander's seat").transform;
 			seat.SetParent(frame, false);
 			seat.SetPositionAndRotation(ToWorld(SeatPoint), root.rotation);
@@ -420,12 +416,11 @@ namespace T80UM2
 			exposure.SeatRest = Quaternion.Inverse(turret.rotation) * seat.rotation;
 			// Climb times: my guess.
 			exposure.Climb = new CrewClimb { OutSeconds = 3f, InSeconds = 2.5f, Linger = 3f };
-			// For a commander outside the hatch, which this tank does not do (switched off: Climbs).
-			// Seated on the roof: leaning 20 deg to the gun, the head up to the К10-Т, the thighs forward along the roof (the right
-			// one a little up over the raised plate and out), the left shin under the pedestal head and a little in (clear of the
-			// magazine), the right one out beside the magazine, heels on the roof; palms (not wrists) on the handles, so the
-			// fingers stop short of the magazine; elbows out and back so the left forearm clears the cupola's sight box. My
-			// guess, fitted against the model.
+			// Seated on the roof, leaning 20 deg to the gun with his head up to the К10-Т. Thighs forward along the roof (the
+			// right one a little up over the raised plate and out), the left shin under the pedestal head and a little in (clear
+			// of the magazine), the right one out beside the magazine, heels on the roof. Palms, not wrists, on the handles so the
+			// fingers stop short of the magazine, and elbows out and back to keep the left forearm clear of the cupola's sight
+			// box. My guess, fitted against the model.
 			exposure.P = new CrewFigure.Pose
 			{
 				LeftGrip = grips[0],
@@ -469,7 +464,7 @@ namespace T80UM2
 			optic.name = "K10-T collimator sight";
 			var slot = optic.slot;
 			if (slot.gameObject != optic.gameObject) slot.gameObject.name = optic.name;
-			SlotReparent.SetValue(slot, eye);
+			SlotReparent?.SetValue(slot, eye);
 			optic.FCS = fcs;
 			optic.RegisterAtStart = true;
 			optic.Mounts = new AimablePlatform[0];
@@ -535,7 +530,6 @@ namespace T80UM2
 			}
 			var crew = vehicle.GetComponent<CrewManager>();
 			station.Ex.Member = crew?.GetCrewMember(CrewPosition.Commander);
-			// The commander is not drawn for now: his hit zones still go out with him.
 			DevLate(station);
 			station.Ex.enabled = station.Ex.Member != null;
 		}

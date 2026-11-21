@@ -9,8 +9,8 @@ using T80UM2.Common;
 namespace T80UM2
 {
 	// The gunner's 1Г46 of the 1А45 «Иртыш» on the 1G42's slot: 2.7-12x, 20 to 4.5 deg («Комплекс управления огнем 1А45»,
-	// odetievbrony.ru); the reticle of the description's Рис. 9 with stadia for a 2.5 m target and its readout strip. The view,
-	// laser and beam stay at the 1G42's place on the gun, as in the T-90A.
+	// odetievbrony.ru). The reticle is the description's Рис. 9, with stadia for a 2.5 m target and its readout strip. The
+	// view, laser and beam stay at the 1G42's place on the gun, as in the T-90A.
 	internal static partial class Sights
 	{
 		const string DayFile = "1g46_day.jsonc";
@@ -43,8 +43,8 @@ namespace T80UM2
 				Ready = "ready",
 				Ammo = "ammo",
 				AmmoText = SightReadout.Glyph7,
-				// The red lamp: «Дубль» / target designation, the commander has the gun (Рис. 9 of «Комплекс управления огнем
-				// 1А45»); GHPC's own override too.
+				// The red lamp: the commander has the gun through «Дубль» or target designation (Рис. 9 of «Комплекс управления
+				// огнем 1А45»), or GHPC's own override is on.
 				Lit = new (string, Func<bool>)[]
 				{
 					("override", () => station.Dubl

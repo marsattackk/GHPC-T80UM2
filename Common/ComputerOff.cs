@@ -65,11 +65,11 @@ namespace T80UM2.Common
 			Snap(fcs);
 		}
 
-		// IsInManualMode is never written by GHPC, it always reads false.
+		// IsInManualMode is never written by GHPC and always reads false.
 		static bool InManual(FireControlSystem fcs)
 			=> fcs.ZeroReticleRangeInAutoMode ? !fcs.ForceReticleToZeroRange : !fcs.SuperelevateWeapon;
 
-		// ReticleMesh eases to a new range at 10 m/s; a mode switch at sight entry slid the night mark from 0 to 3000 m.
+		// ReticleMesh eases to a new range at 10 m/s. A mode switch at sight entry slid the night mark from 0 to 3000 m.
 		static void Snap(FireControlSystem fcs)
 		{
 			var unit = fcs.GetComponentInParent<GHPC.Vehicle.Vehicle>();

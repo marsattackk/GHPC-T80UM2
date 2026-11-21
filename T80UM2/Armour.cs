@@ -9,25 +9,25 @@ using UnityEngine;
 namespace T80UM2
 {
 	// The T-80UM2's armour: War Thunder's damage model with my own values, in place of the T-80B's outer armour. The pieces
-	// come from the bundle and sit on the T-80B rig's collider groups; the bundle's vanilla edits switch off the T-80B pieces
+	// come from the bundle and sit on the T-80B rig's collider groups, and the vanilla edits switch off the T-80B pieces
 	// they replace. The T-80B's three compartment volumes get meshes rebuilt from the import's walls, its five fender fuel
 	// tanks the shapes of the T-80UM2's tank boxes. Kontakt-5 is ERA with the T-90s' set-off rules. Running gear, internals,
-	// hit zones and crew stay the T-80B's. It runs from the conversion before the pivots move: the pieces are placed on their
-	// bones at rest.
+	// hit zones and crew stay the T-80B's. It runs from the conversion before the pivots move: the pieces are placed on
+	// their bones at rest.
 	internal static partial class Armour
 	{
 		internal static GameObject Prefab;
 
-		// Vanilla T-80B pieces the bundle leaves on: the base's fire wall, off beside the pieces the import replaces.
+		// T-80B pieces that vanilla_edits leaves on: the base's fire wall, off beside the pieces the import replaces.
 		static readonly string[] BaseOff = { "Firewall" };
 
 		static bool _warned;
 		internal static DmArmour Values;
 
-		// "Armour preset": the bundle's values are the game-scale set (cheeks 744 / 984 without ERA, the T-90A's step from
-		// its sourced set; glacis 485 / 653, the vanilla T-80B's 485 KE). Source-only scales the two calibrated fillings back
-		// to the sourced targets (cheeks 620 / 900, glacis 430 / 566), each by the ratio of my two ray solves on the same
-		// lines: cheek filling KE 0.5368 / 0.9778, HEAT 1.5126 / 1.9470; glacis filling (steel and textolite alike) KE
+		// "Armour preset": the shipped values are the game-scale set, cheeks 744 / 984 without ERA (the T-90A's step from
+		// its sourced set) and glacis 485 / 653 (the vanilla T-80B's 485 KE). Source-only scales the two calibrated fillings
+		// back to the sourced targets (cheeks 620 / 900, glacis 430 / 566), each by the ratio of my two ray solves on the same
+		// lines. Cheek filling KE 0.5368 / 0.9778, HEAT 1.5126 / 1.9470. Glacis filling (steel and textolite alike) KE
 		// 0.880 / 0.9823, HEAT 1.0 / 1.1416.
 		static readonly string[] GlacisFilling =
 		{
@@ -38,7 +38,6 @@ namespace T80UM2
 			"turret_04_front_dm",
 		};
 
-		// Source-only scales just the two fillings back, each by the ratio of its two solves on the same lines.
 		const float PackageKe = 0.5368f / 0.9778f;
 		const float PackageCe = 1.5126f / 1.9470f;
 		const float GlacisKe = 0.880f / 0.9823f;
@@ -65,8 +64,8 @@ namespace T80UM2
 			if (values != null) Values = DmArmour.Parse(values);
 			var edits = PortText.Load(bundle, VanillaEdits.AssetName);
 			if (edits != null) T80UM2Mod.Edits = VanillaEdits.Parse(edits);
-			// The shared T-80B rig's list as it is now, beside the bundle's copy made at its build (names added since apply without a
-			// new bundle).
+			// The shared T-80B rig's list as it is now, on top of the vanilla edits' copy of it from the bundle's build (names
+			// added since apply without a new bundle).
 			if (T80UM2Mod.Edits != null)
 				T80UM2Mod.Edits.Off = T80UM2Mod.Edits.Off.Union(BaseRigT80B.ImportReplaces).Union(BaseOff).ToArray();
 			// ERA armour to its visual containers.
@@ -77,10 +76,10 @@ namespace T80UM2
 			EraBricks.VanishRest = name => name.StartsWith("ex_era_turret_");
 			EraBricks.Look = () => T80UM2Mod.EraEffects == null || T80UM2Mod.EraEffects.Value;
 			if (Prefab != null && Values == null)
-				MelonLogger.Warning($"{T80UM2Mod.FriendlyName}: bundle has no armour values; the T-80B's armour stays.");
+				MelonLogger.Warning($"{T80UM2Mod.FriendlyName}: no armour values in the DLL or the bundle; the T-80B's armour stays.");
 		}
 
-		// War Thunder's damage model with the mod's values in place of the T-80B's outer armour (the conversion's "armour" row).
+		// War Thunder's damage model with my values in place of the T-80B's outer armour (the conversion's "armour" row).
 		internal static void Apply(Vehicle vehicle)
 		{
 			var prefab = Prefab;

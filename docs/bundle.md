@@ -25,10 +25,10 @@ needed for what the tables name.
 
 | File | Needed | If missing |
 |---|---|---|
-| `dm_armour` | with `T80UM2_armor` | warning `bundle has no armour values; the T-80B's armour stays.` |
+| `dm_armour` | with `T80UM2_armor` | warning `no armour values in the DLL or the bundle; the T-80B's armour stays.` |
 | `vanilla_edits` | with `T80UM2_armor` | the T-80B's own plates stay switched on under the T-80UM2's, and the armour warning names them |
 | `material_roles` | no | glass keeps the bundle's own materials |
-| `rig_map` | no | nothing the rig map names moves: the three hatches, the whip, the НСВТ's mount and cupola, the hanging flaps |
+| `rig_map` | no | nothing the rig map names moves: the turret and gun axes, the three hatches, the whip, the НСВТ's mount, the hanging flaps |
 | `era_links` | no | nothing, the file is empty (see below) |
 | `smoke_points` | no | warning, the grenades leave from the T-80B's tubes |
 
@@ -105,7 +105,8 @@ One piece per line, tab separated, at least 11 fields:
 <piece> <mode> <ke> <ce> <ke after> <ce after> <angle> <material> <x-ray> <name> <source> [<slat>]
 ```
 
-The bundle's table has 184 pieces: 34 `geometry`, 51 `nominal`, 29 `era`, 1 `composite` and 70 `drawn`.
+The table has 184 pieces: 34 `geometry`, 51 `nominal`, 29 `era` and 70 `drawn`. None is in `composite` mode (the cheek
+filling is a `geometry` piece of `composite` material).
 
 - `mode`: `geometry` (`ke` and `ce` are multipliers per mm of path), `composite` (uniform, convex collider), `drawn`
   (x-ray and AAR only, no armour), `era` (the «Контакт-5» bricks, with `ke after` and `ce after` for once a brick has gone
@@ -120,7 +121,7 @@ The bundle's table has 184 pieces: 34 `geometry`, 51 `nominal`, 29 `era`, 1 `com
   of the numbers are in [armour.md](armour.md).
   `slat`: `1` for slat armour.
 
-The values in the bundle are the "game scale" set. The `Armour preset` setting's other value scales two fillings (the
+The shipped values are the "game scale" set. The `Armour preset` setting's other value scales two fillings (the
 turret cheek package and the glacis fillings) back to my sourced targets in code, so that preset needs no second table.
 
 ```
@@ -158,7 +159,7 @@ The role is only for the log. `-` makes the line a note. Donors are unit keys li
 | `gear\|mode` | `base` (leave it, the default), `follow` or `port`. The T-80UM2 uses `base`: the T-80B's running gear stays |
 | `axes\|turret\|gun\|muzzle\|pitch` | the turret ring, the gun's trunnion and the muzzle where War Thunder has them, and the ring's tilt in degrees (1.5 here). The turret turns about the tilted ring and the gun and muzzle move there |
 | `hatch\|?\|role\|node\|baseBone\|hinge\|axis\|angle\|lift` | one hatch, driven by the base bone's `Openness`: lifts for the first 30 %, then turns. Three here, the commander's, the gunner's and the driver's |
-| `mount\|?\|node\|bone\|pivot\|axis` | a part with a pivot of its own, here the НСВТ's mounts and the cupola. The NSVT station's code turns them |
+| `mount\|?\|node\|bone\|pivot\|axis` | a part with a pivot of its own. The NSVT station's code turns `NSVT_H` and `NSVT_V`. The `CUPOLA` and `CUPOLA_SIGHT` lines are read and then skipped, because this tank's cupola doesn't turn |
 | `whip\|?\|node\|base\|tip\|rigid` | the radio whip |
 | `flap\|?\|node\|a\|b\|?\|limit\|taper\|ramp\|lag` | a hanging flap on a jiggle bone, `lag` optional |
 
@@ -186,15 +187,17 @@ number drops the whole list, since it would shift every tube after it.
 
 ## Released bundles
 
-SHA-256 of `Mods/T80UM2/t80um2` in each release zip. When a release changes the bundle, add a row.
+SHA-256 of `Mods/T80UM2/t80um2` in each release zip. Every release gets a row, with the last hash again when the bundle
+didn't change.
 
 | Version | Bundle | Size in bytes |
 |---|---|---|
 | 0.1.0 | `dcdcbcb310c857b773e410df490a1ad6ac0e7b4e047509cd7e986046bddb41ca` | 216,206,170 |
 | 0.1.1 | `67126552cfe50fe11dde163755850d659b9ea97ff3986813377af7ccf3db2869` | 216,229,979 |
 | 0.2.0 | `6d363133016130d02d0d378600a30ca8e62a0bc1e93959a75b6e47683ecc342a` | 216,229,964 |
+| 0.3.0 | `a28ee95435672af77f0ac2e6fc0f11787e58cc5120f9b8900fbd00c5aa707100` | 216,232,769 |
 
 ```
-Expand-Archive T80UM2_0.2.0.zip -DestinationPath check
+Expand-Archive T80UM2_<version>.zip -DestinationPath check
 (Get-FileHash check\Mods\T80UM2\t80um2 -Algorithm SHA256).Hash.ToLower()
 ```

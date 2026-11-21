@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using GHPC.Equipment;
 using GHPC.Vehicle;
 using MelonLoader;
 using T80UM2.Common;
@@ -10,11 +11,11 @@ namespace T80UM2
 {
 	// Turns a spawned T80B into a T-80UM2, step after step in the order of Steps, then two frames later the steps of
 	// LateSteps, which need the components' Start to have run. At spawn the armour, the rounds, the Drozd and the НСВТ go on
-	// with the turret at rest; a unit converted later (another mod's spawner, caught at PlayerReady) gets the model, paint,
+	// with the turret at rest, while a unit converted later (another mod's spawner, caught at PlayerReady) gets the model, paint,
 	// armour and sights without the parts that need that moment.
 	internal static partial class Conversion
 	{
-		// The T80B rig's bones; the bundle's group meshes are built relative to them.
+		// The T80B rig's bones (the bundle's group meshes are built relative to them).
 		static readonly (string group, string path)[] Bones =
 		{
 			("HULL", "T80B_rig/HULL"),
@@ -33,8 +34,8 @@ namespace T80UM2
 			"t80um2_t_80um2_turret"
 		};
 
-		// The crew, ammo slots, carousel, engine box and rack fire markers at the T-80UM2's places, and the port's modules;
-		// both are embedded in the DLL.
+		// The crew, ammo slots, carousel, engine box and rack fire markers at the T-80UM2's places, and the port's modules,
+		// both embedded in the DLL.
 		internal static readonly InteriorMap.Embedded Interior = new InteriorMap.Embedded(
 			typeof(T80UM2Mod).Assembly,
 			T80UM2Mod.FriendlyName,
@@ -145,8 +146,8 @@ namespace T80UM2
 				Run = FitCommander,
 				SpawnOnly = true,
 			},
-			// After the НСВТ. The sights' views are fitted by the late step "sight fitting".
-			new ConversionStep<Parts> { What = "sight setup", Otherwise = "the commander's lid may open", Run = FitSights },
+			// After the НСВТ. The sights themselves are fitted by the late step "sight fitting".
+			new ConversionStep<Parts> { What = "commander's lid", Otherwise = "the commander's lid may open", Run = PinCommanderLid },
 		};
 
 		// The steps that need the components' Start to have run, two frames after the spawn, in this order. Every row runs on
@@ -226,7 +227,7 @@ namespace T80UM2
 			ConversionSteps.Run(T80UM2Mod.FriendlyName, LateSteps, vehicle, vehicle.name, atSpawn, keeps);
 		}
 
-		// The T-80B's own hull / turret / gun / skirts / stowage / lamps off; running gear and tracks stay.
+		// The T-80B's own hull / turret / gun / skirts / stowage / lamps off, but running gear and tracks stay.
 		static void HideBase(Parts parts)
 		{
 			BaseRigT80B.HideBaseVisuals(parts.Root, "T80UM2_", keepLamps: true);
@@ -264,7 +265,7 @@ namespace T80UM2
 					$"{T80UM2Mod.FriendlyName}: no T-80B paint template found; the hull stays on the bundle's material.");
 		}
 
-		// The game's own glass / lens materials on the port's (the bundle's material roles).
+		// The game's own glass / lens materials on the port's (material_roles).
 		static void ApplyGlass(Parts parts)
 		{
 			VanillaMaterials.Apply(parts.Root, T80UM2Mod.Roles);
@@ -277,14 +278,28 @@ namespace T80UM2
 		}
 
 		// The base vehicle's grenade slots onto the port's tubes, then each tube's cap given to its slot, hidden when that
-		// tube fires (the launcher's crew cache is refreshed by the late step "smoke crew refresh").
+		// tube fires (the launcher's crew cache is refreshed by the late step "smoke crew refresh"). A tube left without a slot
+		// is said once, not per tank.
 		static void SeatSmoke(Parts parts)
 		{
-			SmokeLaunchers.Seat(parts.Vehicle, T80UM2Mod.SmokePoints);
+			var tubes = T80UM2Mod.SmokePoints;
+			string seated = SmokeLaunchers.Seat(parts.Vehicle, tubes);
+			var launcher = parts.Vehicle.GetComponentInChildren<VehicleSmokeManager>(true);
+			int tubeCount = tubes?.Length ?? 0;
+			bool everyTube = tubeCount > 0
+				&& Enumerable.Range(1, tubeCount).All(tube => SmokeLaunchers.SlotOfTube(launcher, tube) != null);
+			if (!everyTube && !_smokeWarned)
+			{
+				_smokeWarned = true;
+				MelonLogger.Warning(
+					$"{T80UM2Mod.FriendlyName} smoke launchers: {seated}. A grenade left unseated leaves from the T-80B's tube.");
+			}
 			SmokeCaps.Apply(parts.Root);
 		}
 
-		// War Thunder's damage model with the mod's values in place of the T-80B's outer armour.
+		static bool _smokeWarned;
+
+		// War Thunder's damage model with my values in place of the T-80B's outer armour.
 		static void ApplyArmour(Parts parts)
 		{
 			Armour.Apply(parts.Vehicle);
@@ -307,7 +322,6 @@ namespace T80UM2
 			PortAmmo.ApplyAtSpawn(parts.Vehicle);
 		}
 
-		// The coax belts.
 		static void FitCoax(Parts parts)
 		{
 			PortAmmo.ApplyCoaxAtSpawn(parts.Vehicle);
@@ -339,7 +353,7 @@ namespace T80UM2
 			if (axes != null) PortAxes.Apply(parts.Vehicle, axes);
 			else
 				MelonLogger.Warning(
-					$"{T80UM2Mod.FriendlyName}: bundle's rig map has no axes; the turret turns on the T-80B's pivots.");
+					$"{T80UM2Mod.FriendlyName}: the rig map has no axes; the turret turns on the T-80B's pivots.");
 		}
 
 		// The «Дрозд», when the setting is on.
@@ -355,8 +369,8 @@ namespace T80UM2
 			Commander.Apply(parts.Vehicle);
 		}
 
-		// The commander's lid pinned shut; the views are fitted by the late step "sight fitting" (Sights.cs).
-		static void FitSights(Parts parts)
+		// Sights.Apply only pins the lid. Nothing of the sights is fitted here.
+		static void PinCommanderLid(Parts parts)
 		{
 			Sights.Apply(parts.Vehicle);
 		}
@@ -376,7 +390,7 @@ namespace T80UM2
 		}
 
 		// The shared ammunition self-check once the racks are filled, 30 frames after the spawn (28 more than the late steps
-		// wait); silent when all is right.
+		// wait). Silent when all is right.
 		static void CheckAmmo(Vehicle vehicle)
 		{
 			MelonCoroutines.Start(CheckAmmoLater(vehicle));
@@ -385,6 +399,7 @@ namespace T80UM2
 		static IEnumerator CheckAmmoLater(Vehicle vehicle)
 		{
 			for (int i = 0; i < 28; i++) yield return null;
+			if (vehicle == null) yield break;
 			try { PortAmmo.SelfCheck(vehicle); }
 			catch (Exception exception)
 			{

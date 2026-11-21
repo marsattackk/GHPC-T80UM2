@@ -46,7 +46,7 @@ namespace T80UM2.Common
 
 			internal bool InView => From.Contains(CameraSlot.ActiveInstance);
 
-			// Take the line once. The view rides the turret, a line read every frame runs away with it.
+			// Take the line once. The view rides the turret, so a line read every frame runs away with it.
 			Vector3 _line;
 
 			void Update()

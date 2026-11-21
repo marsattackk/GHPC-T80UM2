@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using T80UM2.Common;
 using UnityEngine;
 
@@ -24,10 +25,11 @@ namespace T80UM2
 		internal const int ConveyorRounds = 28;
 		internal const int PktBelt = 250;   // the ПКТ's belt
 
-		// The mix by round (APFSDS, HEAT, HE-Frag, ATGM) is a gameplay default of mine, not sourced (no regulated mix found): the
-		// T-80B's 18 / 7 / 8 / 2 of 35 scaled to 45, then the 5 dropped taken from the wet rack (3 APFSDS, 1 HEAT, 1 HE).
+		// The mix by round (APFSDS, HEAT, HE-Frag, ATGM) is a gameplay default of mine, not sourced (no regulated mix found).
+		// For 45 rounds I had 22 / 10 / 9 / 4, loosely after the T-80B's 18 / 7 / 8 / 2 of 35 with two more missiles, and the
+		// 5 not carried come off the wet rack: 3 APFSDS, 1 HEAT, 1 HE.
 		internal static readonly PortAmmo.Mix Counts = new PortAmmo.Mix { Apfsds = 19, Heat = 9, He = 8, Missile = 4 };
-		// Conveyor 14 / 6 / 6 + 2 fixed missile slots (26, 13) = 28; wet rack 5 / 3 / 2 + 2 fixed missile slots = 12 (a gameplay
+		// Conveyor 14 / 6 / 6 + 2 fixed missile slots (26, 13) = 28, wet rack 5 / 3 / 2 + 2 fixed missile slots = 12 (a gameplay
 		// split of mine, not sourced). The missile entry is 0: the fixed slots are taken off separately.
 		// What the other tanks of this family call the carousel counts: the source says «конвейер».
 		internal static readonly PortAmmo.Mix ConveyorCounts = new PortAmmo.Mix { Apfsds = 14, Heat = 6, He = 6 };
@@ -35,6 +37,8 @@ namespace T80UM2
 
 		// Campaign weights against the 3BM42's 1: a gameplay setting of mine, not sourced. The 3BM42 is the default.
 		internal const float SvinetsPrevalence = 0.5f;
+		// The HEAT rounds' name ending: GHPC matches rounds by name, so not the T-90M's nor the vanilla "HEAT-FS-T".
+		const string HeatSuffix = " HEAT";
 
 		internal static PortAmmo.Settings Settings() => new PortAmmo.Settings
 		{
@@ -44,8 +48,8 @@ namespace T80UM2
 			SourceUnit = "T80B",   // the vanilla T-80B's ammo list holds 3BM32, 3BK18M, 3OF26 and 9M112M
 			// APFSDS: the 3BM42 «Манго», the serial T-80U's (the «Манго» is in the T-80U's gun description), and the long «Свинец»
 			// rods 3BM59 / 3BM60. The loading mechanism was reworked for the 735-740 mm rods on the T-80БВМ («доработан ...
-			// механизм заряжания под боеприпасы 3БМ59 "Свинец-1", 3БМ60 "Свинец-2"», TASS 2018); no source says the UM2 got it,
-			// so that is my inference. The rounds have names of their own (GHPC compares rounds by name: the T-90s'
+			// механизм заряжания под боеприпасы 3БМ59 "Свинец-1", 3БМ60 "Свинец-2"», TASS 2018), but no source says the UM2
+			// got it, so that is my inference. The rounds have names of their own (GHPC compares rounds by name: the T-90s'
 			// "3BM60 Svinets-2" would follow their lists), values as the T-90M's.
 			Apfsds = new[]
 			{
@@ -73,7 +77,7 @@ namespace T80UM2
 					Source = "clip_3BM32",
 					Texture = "round_3bm59_co.png",
 					Atlas = "125mm_co",
-					// The 3BM60's 735 mm outline: the same 3ВБМ22 / 23 family and the same 4Ж96 charge; I found no drawing of its
+					// The 3BM60's 735 mm outline: the same 3ВБМ22 / 23 family and the same 4Ж96 charge. I found no drawing of its
 					// own, so this is inferred.
 					Shape = "3BM60",
 					Set = ammo =>
@@ -114,10 +118,22 @@ namespace T80UM2
 			},
 			DefaultApfsds = () => T80UM2Mod.Apfsds?.Value,
 			ForceApfsds = () => T80UM2Mod.ForceApfsds?.Value == true,
+			RandomApfsds = () => T80UM2Mod.RandomApfsds?.Value == true,
+			ApfsdsPool = () => T80UM2Mod.ApfsdsPool?.Value,
+			LoadPreset = () => T80UM2Mod.AmmunitionLoad?.Value,
+			EmptyRacks = () => T80UM2Mod.EmptyRacks?.Value,
 			ApfsdsListName = "125mm APFSDS (T-80UM2)",
 			MenuSuffix = " (T-80UM2)",
-			// HEAT: the 3BK18M, the vanilla clip as it is, locked. HE-FRAG: the T-80B's own third entry, the 3OF26 (23 kg, 850 m/s).
-			FixedHeat = "clip_3BK18M",
+			// HEAT: 3BK29M (default), 3BK31 and 3BK18M, the T-90M's set under this tank's own names (GitHub issue
+			// GHPC-T90M#9). HE-FRAG: the T-80B's own third entry, the 3OF26 (23 kg, 850 m/s).
+			HeatChoice = Heat125.Choice(HeatSuffix),
+			DefaultHeat = () => T80UM2Mod.Heat?.Value,
+			ForceHeat = () => T80UM2Mod.ForceHeat?.Value == true,
+			RandomHeat = () => T80UM2Mod.RandomHeat?.Value == true,
+			HeatPool = () => T80UM2Mod.HeatPool?.Value,
+			HeatListName = "125mm HEAT (T-80UM2)",
+			EraRules = Heat125.EraRules(HeatSuffix),
+			SplitCharges = Heat125.SplitCharges(HeatSuffix),
 			// The 9М119М «Инвар» is the T-90A's round with a name of the T-80UM2's own.
 			Missile = new PortAmmo.Round
 			{
@@ -129,10 +145,10 @@ namespace T80UM2
 				Shape = "9M119M",
 				Set = ammo =>
 				{
-					ammo.RhaPenetration = 700f;   // «700» mm mean at normal; constant (shaped charge)
+					ammo.RhaPenetration = 700f;   // «700» mm mean at normal, constant (shaped charge)
 					ammo.Tandem = true;   // tandem warhead (PortAmmo's TandemEraPatch: the precursor sets off ERA)
 					ammo.Mass = 17.2f;
-					// GHPC flies a missile at constant speed, 284 m/s gives the real 17.6 s to 5 km.
+					// GHPC flies a missile at constant speed: 284 m/s gives the real 17.6 s to 5 km.
 					ammo.MuzzleVelocity = 284f;   // derived: 5000 m in 17.6 s
 					ammo.MaximumRange = 5000f;   // «100 - 5000» m
 					ammo.ArmingDistance = 100f;   // minimum range (the 9M112M's is 70)
@@ -148,10 +164,12 @@ namespace T80UM2
 				// Ammo carousel: missiles at 26 (the T-80B's) and 13, across the ring, not 26 / 27 side by side. The 9М119М's
 				// stored model is full calibre along its length and two neighbours overlap 17 mm in the conveyor's converging
 				// trays (vanilla rounds 2.9 mm, the 3BM60 no worse). The slot choice is a gameplay / look setting.
-				new PortAmmo.Rack { Index = 0, Counts = ConveyorCounts, MissileSlots = new[] { 26, 13 } },
+				new PortAmmo.Rack { Index = 0, Name = "autoloader", Counts = ConveyorCounts, MissileSlots = new[] { 26, 13 } },
 				// Hull wet rack + 5 slots (copies 4 / 5: the turret rear).
-				new PortAmmo.Rack { Index = 1, Counts = WetRackCounts, MissileSlots = new[] { 10, 11 } },
+				new PortAmmo.Rack { Index = 1, Name = "hull", Counts = WetRackCounts, MissileSlots = new[] { 10, 11 } },
 			},
+			// The racks' names are the words the player types in Empty racks. Autoloader only leaves the hull wet rack empty.
+			LoadPresets = new Dictionary<string, string[]> { { "Autoloader", new[] { "hull" } } },
 			BeamOnBaseUnit = true,   // the T-80B's guidance unit kept, steered along the day-sight beam
 			BeamName = "T80UM2 guidance beam",
 			// Coax ПКТ: 1250 rounds in 5 belts of 250: «1250 патронов, снаряженных в пяти лентах (по 250 патронов в каждой)».
@@ -173,8 +191,8 @@ namespace T80UM2
 			// −4 over the rear: «снижения ... (на корму)» 4 deg, from the T-64A manual (same Kharkiv fighting compartment and gun
 			// mount). The rear sector's bounds are in no source: ±150..180 deg from the nose, inferred, with 5 deg ramps.
 			DepressionProfile = "gun_depression.txt",
-			// One step of the conveyor takes 7.1 s («7,1 при повороте конвейера на один шаг», the T-64A manual: the family's МЗ;
-			// the T-80U's own figure not found, medium confidence). GHPC's T-80B stages (7.2 s) scaled to it.
+			// One step of the conveyor takes 7.1 s («7,1 при повороте конвейера на один шаг», the T-64A manual for the family's МЗ),
+			// medium confidence, as the T-80U's own figure wasn't found. GHPC's T-80B stages (7.2 s) scaled to it.
 			AutoloaderCycle = 7.1f,
 			GunName = "125mm Gun 2A46M-1",   // «На Т-80У установлена ... 2А46М-1»
 			CodexName = "T80UM2 2A46M-1",

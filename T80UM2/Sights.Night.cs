@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using GHPC.Camera;
 using GHPC.Equipment.Optics;
 using GHPC.Vehicle;
 using GHPC.Weaponry;
 using GHPC.Weapons;
+using MelonLoader;
 using Reticle;
 using T80UM2.Common;
 using UnityEngine;
@@ -12,9 +14,9 @@ namespace T80UM2
 {
 	// The night sights on the TPN-3-49's slot: the «Агава-2» thermal by default (its own part file), or the ТПН-4
 	// «Буран-ПА» on a copy of the TPN-3-49 when the "Night sight" setting says so, in play too. The «Буран-ПА» keeps the
-	// image intensifier's look (GHPC's 'GHPC NOD gen 2 RU'); its reticle is inferred. It fires only with the computer off,
-	// the range set by hand on the scales («Т-80У», БТВТ; the shared ComputerOff in manual mode: GHPC's manual mode while it
-	// is the view, no laser).
+	// image intensifier's look (GHPC's 'GHPC NOD gen 2 RU') with an inferred reticle. It fires only with the computer off,
+	// the range set by hand on the scales («Т-80У», БТВТ). That is the shared ComputerOff in manual mode: GHPC's manual mode
+	// while it is the view, no laser.
 	internal static partial class Sights
 	{
 		// The setting's values
@@ -25,7 +27,7 @@ namespace T80UM2
 
 		// «Поле зрения, град. 5,25» (Suvorov, «Т-90»)
 		const float NightFov = 5.25f;
-		// The scales' span (Б / ОК to 20: my guess, inferred from the ТПН-4ER description); the gun to 1500 m (Suvorov, «Т-90»)
+		// The scales' span (Б / ОК to 20: my guess, inferred from the ТПН-4ER description) and the gun to 1500 m (Suvorov, «Т-90»)
 		static readonly Vector2 NightRange = new Vector2(0f, 2000f);
 
 		// The ТПН-4 «Буран-ПА» on the TPN-3-49's slot.
@@ -80,10 +82,27 @@ namespace T80UM2
 			{
 				get
 				{
-					string want = T80UM2Mod.NightSight != null && T80UM2Mod.NightSight.Value == BuranPa ? BuranPa : Agava2;
+					string want = Chosen(T80UM2Mod.NightSight?.Value);
 					DevNight(ref want);
 					return want;
 				}
+			}
+
+			static string _warnedAbout;
+
+			// Read every frame, so a value that is neither name warns once and then means the Agava-2.
+			static string Chosen(string typed)
+			{
+				if (typed == null) return Agava2;
+				string trimmed = typed.Trim();
+				if (string.Equals(trimmed, BuranPa, StringComparison.OrdinalIgnoreCase)) return BuranPa;
+				if (!string.Equals(trimmed, Agava2, StringComparison.OrdinalIgnoreCase) && typed != _warnedAbout)
+				{
+					_warnedAbout = typed;
+					MelonLogger.Warning(
+						$"{Tag}: Night sight \"{typed}\" is neither {Agava2} nor {BuranPa}, so the gunner gets the {Agava2}.");
+				}
+				return Agava2;
 			}
 
 			internal void Init(Fitted station, Vehicle vehicle)

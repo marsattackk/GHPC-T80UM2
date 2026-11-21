@@ -25,7 +25,8 @@ namespace T80UM2
 			return module?.ActiveWeapon != null && module.ActiveWeapon.Weapon == station.Weapon;
 		}
 
-		// Every frame: the box change goes on only while he is out there (the magazines are outside).
+		// Every frame: with Climbs on, the box change would wait until he is out there (the magazines are outside). Off, it
+		// never waits.
 		internal class Link : MonoBehaviour
 		{
 			Station _station;
@@ -51,7 +52,7 @@ namespace T80UM2
 					if (!__result || !ByWeapon.TryGetValue(__instance, out var station) || station == null || station.Ex == null) return;
 					if (Climbs ? !station.Ex.Climb.MayFire : !IsPlayers(station)) __result = false;
 				}
-				catch (System.Exception exception) { PatchGuard.Failed("NSVT fires only with the commander out", exception); }
+				catch (System.Exception exception) { PatchGuard.Failed("NSVT fires only for the player's tank", exception); }
 			}
 		}
 	}
