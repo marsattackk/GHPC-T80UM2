@@ -22,10 +22,10 @@ It defaults to the usual Steam path. The DLL ends up in `bin\Release\T80UM2.dll`
 game.
 
 The bundle (model, textures, armour meshes) is not in this repo and is not built from it: take `Mods\T80UM2\t80um2` from
-the latest [release zip](https://github.com/marsattackk/GHPC-T80UM2/releases/latest). 0.2.0 ships a bundle of its own,
-but it differs from 0.1.1's only in the normals and UVs of the cupola and the commander's hatch, so this code runs on
-either. Without the bundle's model the mod loads and the T-80UM2 stays a complete T-80B: nothing of the conversion is
-applied.
+the latest [release zip](https://github.com/marsattackk/GHPC-T80UM2/releases/latest). 0.2.0 shipped a bundle of its own,
+but it differs from 0.1.1's only in the normals and UVs of the cupola and the commander's hatch, and 0.3.0's is the
+same content packed again (a new hash, no object changed), so this code runs on any of them. Without the bundle's
+model the mod loads and the T-80UM2 stays a complete T-80B: nothing of the conversion is applied.
 
 The DLL logs a stamp when it loads, like `T-80UM2 <version>+a1b2c3d.public, game <version>, Steam build <number>`, so a
 player's log tells you which build they ran. The version comes from `MelonInfo` in `T80UM2\Mod.cs`, the commit from

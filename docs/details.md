@@ -19,7 +19,7 @@ The real tank is a T-80U with the «Дрозд» (Drozd) on the turret front, an
 | Night sight | ТПН-3-49 image intensifier | «Агава-2» thermal, or the ТПН-4 «Буран-ПА» |
 | Commander | free-look head view | the same view, plus the ТКН-4С with «Дубль» and target designation (ЦУ) |
 | Commander's MG | NSV on the cupola, for looks | НСВТ «Утёс» on its pedestal, hand-laid, with the К10-Т |
-| Main gun ammo | 38 rounds, 3BM15 and co. | 40 rounds, 3BM42, 3BM59 or 3BM60, and the 9M119M «Инвар» (Invar) missile |
+| Main gun ammo | 38 rounds, 3BM15 and co. | 40 rounds, 3BM42, 3BM59 or 3BM60, 3BK29M, 3BK31 or 3BK18M, and the 9M119M «Инвар» (Invar) missile |
 | Coax | ПКТ, 2000 rounds | ПКТ, 1250 rounds |
 | Engine | ГТД-1000ТФ, 1100 hp | ГТД-1250, 1250 hp |
 | Mass | 46.5 t | 47 t |
@@ -49,7 +49,7 @@ It had a sister built at the same time, the Т-80УМ1 «Барс» with «Ар�
 
 **«Агава-2»** (Т01-П02Т, the default): a thermal on a 4:3 monitor, white-hot, 288 lines. Two fields, 4 × 2.7° (x5.5) and 2 × 1.35° (x11), taken from the maker's table. It looks along the 1Г46's line, and the mirror goes -10° to +20°. The monitor has its info blocks as the photo shows them: the mode and the range top left, four boxes top right and the ready lamp. The thin cross in the middle is mine.
 
-**ТПН-4 «Буран-ПА»** (the `Night sight` setting, and you can swap it in play): an image intensifier with a 5.25° field. Its range scale goes to 1500 m, and the mod's own range limit is 2000 m. It fires with the computer off, so you set the range by hand on the scales. The reticle is my guess, laid out like the one on its Ukrainian successor, because I found no drawing of the real one.
+**ТПН-4 «Буран-ПА»** (the `Night sight` setting, and you can swap it in play): an image intensifier with a 5.25° field. The real one is rated to 1500 m, but the scales I drew and the mod's own range limit go to 2000 m. It fires with the computer off, so you set the range by hand on the scales. The reticle is my guess, laid out like the one on its Ukrainian successor, because I found no drawing of the real one.
 
 **ТКН-4С** (commander): the T-90A's reticle, since it's the same sight. Day field 7.8°, night 11.5°, mirror -10° to +20°. With **«Дубль»** the commander lays and fires the main gun looking through it, with the computer off, the range set by hand on his stadia and no laser. The gun's line and his meet at 1600 m, because the sight sits 0.6 m right of the gun and over it. **Target designation** is the game's Aim Override key in his own view, and the turret slews onto what he's looking at. The cupola with the sight stays fixed on the turret, and nothing turns it.
 
@@ -179,6 +179,7 @@ A lot of this is my best guess, because the tank was one of a kind and its figur
 - The autoloader's 7.1 s is the T-64A manual's time for one step of the conveyor. GHPC has one time a round, so every round takes it.
 - The 3BM42 and 3BM60 figures are the ones in my T-90A. The 3BM59's I scaled, as above, and its 4.5 kg, 1660 m/s and drag of 0.093 are inferred from the 3BM60. The 3BM42's drag is the game's 3BM32's. The Invar's 17.2 kg and its arming at 100 m are mine. Its 284 m/s is the speed that gets it to 5000 m in the maker's 17.6 s, and GHPC flies a missile at one speed. It blows itself up just past 5 km.
 - The 40 rounds, the mix and the 12 hand-stowed places are my choice, as above. The type mix in the campaign is the same one. Its weights are a gameplay choice: the 3BM59 and 3BM60 at 0.5 against the 3BM42's 1, the tank itself at a prevalence of 0.15 from the 2nd mission.
+- No source says which HEAT the UM2 carried, so it gets the T-90M's three: 3BK29M by default, 3BK31 and 3BK18M. The campaign rolls 3BK29M and 3BK18M at the same weight and never 3BK31, which only turns up if you pick it. The two Random settings are gameplay options, not a source's mix.
 - The top speed of about 70 km/h comes from lowering GHPC's drag from 0.1 to 0.077. With 1250 hp and 47 t the tank levelled off at 63 km/h. The tuning gives 68 to 70. The final drive keeps the T-80B's 2300 rpm scale, so the rpm itself isn't the real 3150. For the same reason the final drive is my solved 5.216 and not the T-80U's 5.45, and the speed cap is 80 km/h. The reverse is the gearing's 11 km/h.
 - The coax's 1250 rounds are the T-80U's. The T-80B has 2000.
 - Eight smoke grenades and no spares, though the real tank carries 12. GHPC has no smoke restock. The cloud's 3 s build and 20 s life are mine, as on the T-90A. The launch angle is the 3Д17's 12°, because the model's tubes at about 41° would burst the grenade 40 m up.
@@ -192,7 +193,7 @@ A lot of this is my best guess, because the tank was one of a kind and its figur
 
 **Not seen in game yet**
 
-- I haven't seen the HEAT, HE and Invar rounds fly in game on the current build.
+- I've seen the Invar fly on the current build: out to 5081 m in 17.9 s, where it blew itself up. The 3BK29M HEAT and the 3OF26 load and fire, but I haven't watched either in flight.
 - Two faults I've left for now. Entering the «Буран-ПА» clamps the lased range to 2000 m, and the 1Г46 keeps that range until you lase again. After a reload, `Fire only when the gun is laid` holds the shot until the gun is laid again.
 - The «Дрозд» effects look pass against footage isn't done.
 

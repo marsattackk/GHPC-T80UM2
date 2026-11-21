@@ -179,6 +179,9 @@ The rest, which no script reads:
   `AarController.createShotTrace`. Without them it's one jet again, or fragment lines in the recap.
   The tandem pop and the white precursor line (`Common\TandemLook.cs`) use `LiveRound.doImpactVFX`,
   `ParticleEffectsManager.CreateImpactEffectOfType` and `ShotTraceVisual.jetColor`. Lose them and tandem rounds look like plain HEAT.
+  `Common\BehindArmour.cs` widens the HEAT's fragment cone off the first hull or turret plate it holes (a postfix on
+  `LiveRound.getSpallMaxAngle`, up to 80°, full on 50 mm or more) and gives 3BK31's second jet its fragments (a prefix
+  and postfix on `LiveRound.penCheck`). Lose them and a strong jet throws most of its fragments out the far side again.
 - **Fonts and materials**: `Soviet7SegmentFont SDF` and `Reticle LiberationSans SDF` where the reticle files name them,
   `Standard (FLIR)`, `GHPC NOD gen 2 RU` (the «Буран-ПА»'s image intensifier look) and `see-through teal gray` for the
   x-ray (no log line if that one goes).
